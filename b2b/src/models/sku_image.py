@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 import uuid
-from sqlalchemy import String, ForeignKey
+from sqlalchemy import String, Integer, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -11,8 +11,8 @@ if TYPE_CHECKING:
     from .sku import SKU
 
 
-class SKUCharacteristic(Base):
-    __tablename__ = "sku_characteristics"
+class SKUImage(Base):
+    __tablename__ = "sku_images"
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -22,7 +22,7 @@ class SKUCharacteristic(Base):
         ForeignKey("skus.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
-    value: Mapped[str] = mapped_column(String(500), nullable=False)
+    url: Mapped[str] = mapped_column(String(1000), nullable=False)
+    ordering: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    sku: Mapped["SKU"] = relationship(back_populates="characteristics")
+    sku: Mapped["SKU"] = relationship(back_populates="images")

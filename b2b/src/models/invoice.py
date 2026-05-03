@@ -1,26 +1,39 @@
 import enum
-from datetime import datetime
-from typing import List
+import uuid
+from typing import TYPE_CHECKING
+
 from sqlalchemy import ForeignKey, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from b2b.src.database import Base
+from sqlalchemy.dialects.postgresql import UUID
+from b2b.src.database import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from .seller import Seller
+    from .invoice_item import InvoiceItem
 
 
-class InvoiceStatus(str, enum.Enum): # точно такие??
+class InvoiceStatus(str, enum.Enum):
     CREATED = "CREATED"
-    ON_MODERATION = "ON_MODERATION"
-    MODERATED = "MODERATED"
-    BLOCKED = "BLOCKED"
+    ACCEPTED = "ACCEPTED"
 
 
-class Invoice(Base):
+class Invoice(Base, TimestampMixin):
     __tablename__ = "invoices"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    seller_id: Mapped[int] = mapped_column(ForeignKey("sellers.id"))
-    status: Mapped[InvoiceStatus] = mapped_column(Enum(InvoiceStatus), default=InvoiceStatus.CREATED)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
-    accepted_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    seller_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("sellers.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True
+    )
+    status: Mapped[InvoiceStatus] = mapped_column(
+        Enum(InvoiceStatus), nullable=False, default=InvoiceStatus.CREATED
+    )
 
-    seller: Mapped["Seller"] = relationship(lazy="joined")
-    items: Mapped[List["InvoiceItem"]] = relationship(cascade="all, delete-orphan")
+    seller: Mapped["Seller"] = relationship(back_populates="invoices")
+    items: Mapped[list["InvoiceItem"]] = relationship(
+        back_populates="invoice", cascade="all, delete-orphan"
+    )
