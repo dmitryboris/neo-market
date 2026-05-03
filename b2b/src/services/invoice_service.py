@@ -1,9 +1,8 @@
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from src.models.invoice import Invoice, InvoiceItem, InvoiceStatus
-from src.models.sku import SKU
-from src.schemas.invoice import InvoiceCreate
+from b2b.src.models.invoice import Invoice, InvoiceItem, InvoiceStatus
+from b2b.src.models.sku import SKU
+from b2b.src.schemas.invoice import InvoiceCreate
  
 async def create_invoice(db: AsyncSession, seller_id: int, data: InvoiceCreate) -> Invoice:
     invoice = Invoice(seller_id=seller_id)

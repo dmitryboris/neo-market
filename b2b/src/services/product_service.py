@@ -1,8 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from src.models.product import Product, ProductImage, ProductCharacteristic
-from src.schemas.product import ProductCreate, ProductUpdate
+from b2b.src.models.product import Product, ProductImage, ProductCharacteristic
+from b2b.src.schemas.product import ProductCreate, ProductUpdate
  
 async def create_product(db: AsyncSession, seller_id: int, data: ProductCreate) -> Product:
     product = Product(

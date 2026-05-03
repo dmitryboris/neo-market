@@ -1,6 +1,6 @@
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
-from src.database import Base
+from b2b.src.database import Base
 
 class SKUCharacteristic(Base):
     __tablename__ = "sku_characteristics"

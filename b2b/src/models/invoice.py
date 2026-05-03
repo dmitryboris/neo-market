@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List
 from sqlalchemy import ForeignKey, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from src.database import Base
+from b2b.src.database import Base
 
 
 class InvoiceStatus(str, enum.Enum): # точно такие??
