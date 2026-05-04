@@ -1,7 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from src.models.sku import SKU, SKUCharacteristic
-from src.schemas.sku import SKUCreate, SKUUpdate
+from b2b.src.models.sku import SKU, SKUCharacteristic
+from b2b.src.schemas.sku import SKUCreate, SKUUpdate
  
 async def create_sku(db: AsyncSession, data: SKUCreate) -> SKU:
     sku = SKU(

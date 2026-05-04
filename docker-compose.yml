@@ -1,0 +1,31 @@
+services:
+  b2b_db:
+    image: postgres:18-alpine
+    container_name: b2b-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - b2b_pg_data:/var/lib/postgresql
+    ports:
+      - "${DB_PORT}:5432"
+
+  b2b:
+    build: ./b2b
+    container_name: b2b-api
+    restart: unless-stopped
+    environment:
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_PORT: ${DB_PORT}
+      DB_HOST: b2b_db
+    depends_on:
+      - b2b_db
+    ports:
+      - "8000:8000"
+
+volumes:
+  b2b_pg_data:

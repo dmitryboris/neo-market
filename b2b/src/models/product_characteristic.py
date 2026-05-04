@@ -1,0 +1,27 @@
+from typing import TYPE_CHECKING
+
+import uuid
+from sqlalchemy import ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.dialects.postgresql import UUID
+from src.database import Base
+
+if TYPE_CHECKING:
+    from .product import Product
+
+
+class ProductCharacteristic(Base):
+    __tablename__ = "product_characteristics"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    product_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("products.id", ondelete="CASCADE"),
+        nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    value: Mapped[str] = mapped_column(String(500), nullable=False)
+
+    product: Mapped["Product"] = relationship(back_populates="characteristics")

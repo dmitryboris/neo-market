@@ -1,6 +1,6 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 from typing import List, Optional
-from src.schemas.product import CharacteristicResponse
+from b2b.src.schemas.product import CharacteristicResponse
  
 class SKUCreate(BaseModel):
     product_id: int
