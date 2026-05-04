@@ -4,7 +4,7 @@ import uuid
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
-from b2b.src.database import Base
+from src.database import Base
 
 if TYPE_CHECKING:
     from .product import Product

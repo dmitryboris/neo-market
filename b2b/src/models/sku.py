@@ -4,7 +4,7 @@ import uuid
 from sqlalchemy import ForeignKey, BigInteger, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
-from b2b.src.database import Base, TimestampMixin
+from src.database import Base, TimestampMixin
 
 if TYPE_CHECKING:
     from .product import Product

@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.dialects.postgresql.base import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from b2b.src.database import Base, TimestampMixin
+from src.database import Base, TimestampMixin
 from sqlalchemy import String
 import uuid
 
