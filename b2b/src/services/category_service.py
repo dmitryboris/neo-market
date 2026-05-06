@@ -1,9 +1,15 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import UUID, select
 from sqlalchemy.orm import selectinload
-from fastapi import HTTPException, status
 from models import Category, Product
 from schemas.category import CategoryCreate, CategoryUpdate
+from services.exceptions import (
+    CategoryNotFound,
+    CategoryParentNotFound,
+    CategorySelfParentError,
+    CategoryHasProducts,
+    CategoryHasChildren,
+)
 
 
 async def get_category_by_id(session: AsyncSession, category_id) -> Category | None:
@@ -33,10 +39,7 @@ async def create_category(session: AsyncSession, request: CategoryCreate) -> Cat
     if request.parent_id:
         parent = await get_category_by_id(session, request.parent_id)
         if not parent:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Родительская категория не найдена",
-            )
+            raise CategoryParentNotFound("Parent category not found")
 
     category = Category(
         name=request.name,
@@ -51,16 +54,10 @@ async def create_category(session: AsyncSession, request: CategoryCreate) -> Cat
 async def update_category(session: AsyncSession, category: Category, request: CategoryUpdate) -> Category:
     if request.parent_id:
         if request.parent_id == category.id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Категория не может быть родителем самой себя",
-            )
+            raise CategorySelfParentError("Category cannot be its own parent")
         parent = await get_category_by_id(session, request.parent_id)
         if not parent:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Родительская категория не найдена",
-            )
+            raise CategoryParentNotFound("Parent category not found")
 
     for field, value in request.model_dump(exclude_unset=True).items():
         setattr(category, field, value)
@@ -75,13 +72,13 @@ async def delete_category(session: AsyncSession, category: Category):
         select(Product.id).where(Product.category_id == category.id).limit(1)
     )
     if product_exists:
-        raise HTTPException(status_code=409, detail="Категория содержит товары и не может быть удалена")
+        raise CategoryHasProducts("Category contains products and cannot be deleted")
     
     child_exists = await session.scalar(
         select(Category.id).where(Category.parent_id == category.id).limit(1)
     )
     if child_exists:
-        raise HTTPException(status_code=409, detail="Категория содержит подкатегории и не может быть удалена")
+        raise CategoryHasChildren("Category contains subcategories and cannot be deleted")
     
     await session.delete(category)
     await session.commit()
