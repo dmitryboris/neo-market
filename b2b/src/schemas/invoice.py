@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict, field_validator
 from uuid import UUID
 from datetime import datetime
-from models.invoice import InvoiceStatus
+from src.models.invoice import InvoiceStatus
 
 
 class InvoiceItemCreate(BaseModel):

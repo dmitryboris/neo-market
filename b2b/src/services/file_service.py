@@ -3,7 +3,7 @@ import aiofiles
 from pathlib import Path
 from datetime import datetime
 from fastapi import UploadFile
-from services.exceptions import InvalidFileType, FileTooLarge
+from src.services.exceptions import InvalidFileType, FileTooLarge
 from src.config import settings
 
 ALLOWED_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}

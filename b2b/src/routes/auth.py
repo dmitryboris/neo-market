@@ -8,6 +8,7 @@ from src.security import hash_password, verify_password, create_access_token, cr
 from src.dependencies import get_current_user
 from src.config import settings
 from sqlalchemy import select
+from fastapi.security import OAuth2PasswordRequestForm
 
 auth_router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -41,7 +42,7 @@ async def register(req: RegisterRequest, session: AsyncSession = Depends(get_ses
     decoded_refresh = decode_token(refresh_token)
     rt = RefreshToken(
         jti=decoded_refresh["jti"],
-        user_id=seller.id,
+        seller_id=seller.id,
         issued_at=datetime.fromtimestamp(decoded_refresh["iat"], tz=timezone.utc),
         expires_at=datetime.fromtimestamp(decoded_refresh["exp"], tz=timezone.utc),
     )
@@ -79,7 +80,7 @@ async def login(req: LoginRequest, session: AsyncSession = Depends(get_session))
     decoded_refresh = decode_token(refresh_token)
     rt = RefreshToken(
         jti=decoded_refresh["jti"],
-        user_id=seller.id,
+        seller_id=seller.id,
         issued_at=datetime.fromtimestamp(decoded_refresh["iat"], tz=timezone.utc),
         expires_at=datetime.fromtimestamp(decoded_refresh["exp"], tz=timezone.utc),
     )
@@ -110,7 +111,6 @@ async def refresh(req: RefreshRequest, session: AsyncSession = Depends(get_sessi
             detail={"code": "INVALID_TOKEN", "message": "Нет jti в refresh токене"},
         )
 
-    from sqlalchemy import select
     stmt = select(RefreshToken).where(RefreshToken.jti == jti)
     result = await session.execute(stmt)
     rt = result.scalars().first()
@@ -138,7 +138,7 @@ async def refresh(req: RefreshRequest, session: AsyncSession = Depends(get_sessi
     decoded_new = decode_token(new_refresh)
     new_rt = RefreshToken(
         jti=decoded_new["jti"],
-        user_id=rt.user_id,
+        seller_id=rt.seller_id,
         issued_at=datetime.fromtimestamp(decoded_new["iat"], tz=timezone.utc),
         expires_at=datetime.fromtimestamp(decoded_new["exp"], tz=timezone.utc),
     )
@@ -171,7 +171,6 @@ async def logout(req: LogoutRequest, current_user: Seller = Depends(get_current_
 
     jti = payload.get("jti")
     if jti:
-        from sqlalchemy import select
         stmt = select(RefreshToken).where(RefreshToken.jti == jti)
         result = await session.execute(stmt)
         rt = result.scalars().first()
@@ -180,3 +179,8 @@ async def logout(req: LogoutRequest, current_user: Seller = Depends(get_current_
             session.add(rt)
             await session.commit()
     return
+
+@auth_router.post("/token", response_model=TokenResponse)
+async def login_form(form_data: OAuth2PasswordRequestForm = Depends(), session: AsyncSession = Depends(get_session)):
+    req = LoginRequest(email=form_data.username, password=form_data.password)
+    return await login(req, session)

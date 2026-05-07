@@ -3,9 +3,9 @@ from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_session
 from src.dependencies import get_current_user
-from schemas.category import CategoryCreate, CategoryUpdate, CategoryResponse, CategoryWithChildrenResponse
-from services import category_service
-from services import exceptions as exc
+from src.schemas.category import CategoryCreate, CategoryUpdate, CategoryResponse, CategoryWithChildrenResponse
+from src.services import category_service
+from src.services import exceptions as exc
 
 category_router = APIRouter(prefix="/categories", tags=["Categories"])
 

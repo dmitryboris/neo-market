@@ -1,10 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import UUID, select
 from sqlalchemy.orm import selectinload
-from models import Category, Product
-from schemas.category import CategoryCreate, CategoryUpdate
-from services.exceptions import (
-    CategoryNotFound,
+from src.models import Category, Product
+from src.schemas.category import CategoryCreate, CategoryUpdate
+from src.services.exceptions import (
     CategoryParentNotFound,
     CategorySelfParentError,
     CategoryHasProducts,

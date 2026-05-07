@@ -1,14 +1,14 @@
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from services.exceptions import (
+from src.services.exceptions import (
     ProductNotFound, SKUNotFound, ImageNotFound, NoFieldsToUpdate
 )
-from services.file_service import delete_file_from_disk
-from models.sku import SKU
-from models.sku_image import SKUImage
-from models.product_image import ProductImage
-from models.product import Product
+from src.services.file_service import delete_file_from_disk
+from src.models.sku import SKU
+from src.models.sku_image import SKUImage
+from src.models.product_image import ProductImage
+from src.models.product import Product
 
 
 async def _get_product_with_access(session: AsyncSession, product_id: UUID, seller_id: UUID) -> Product:

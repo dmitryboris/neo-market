@@ -1,19 +1,19 @@
 from fastapi import APIRouter, Depends, UploadFile, File, status, HTTPException
-from src.dependencies import get_current_seller
-from services import file_service
-from services.exceptions import InvalidFileType, FileTooLarge
-from schemas.upload import UploadResponse
+from src.dependencies import get_current_user
+from src.services import file_service
+from src.services.exceptions import InvalidFileType, FileTooLarge
+from src.schemas.upload import UploadResponse
 
 upload_router = APIRouter(prefix="/upload", tags=["Upload"])
 
 @upload_router.post(
     "/image", response_model=UploadResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Загрузить изображение",
+    summary="Upload image",
 )
 async def upload_image_endpoint(
     file: UploadFile = File(...),
-    _=Depends(get_current_seller)
+    _=Depends(get_current_user)
 ):
     try:
         url = await file_service.upload_image(file)
