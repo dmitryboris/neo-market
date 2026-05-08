@@ -130,7 +130,7 @@ async def refresh(req: RefreshRequest, session: AsyncSession = Depends(get_sessi
     rt.revoked = True
     session.add(rt)
 
-    user_id = str(rt.user_id)
+    user_id = str(rt.seller_id)
     role = payload.get("role", "seller")
     new_access = create_access_token(user_id, role)
     new_refresh = create_refresh_token(user_id, role)
