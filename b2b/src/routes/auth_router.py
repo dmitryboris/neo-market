@@ -32,6 +32,7 @@ async def register(req: RegisterRequest, session: AsyncSession = Depends(get_ses
         first_name=req.first_name,
         last_name=req.last_name,
         phone=req.phone,
+        middle_name=req.middle_name
     )
     session.add(seller)
     await session.flush()
