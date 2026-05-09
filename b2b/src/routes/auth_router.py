@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
 from src.database import get_session
-from src.schemas.auth import RegisterRequest, LoginRequest, RefreshRequest, LogoutRequest, TokenResponse
+from src.schemas.auth import RegisterRequest, LoginRequest, RefreshRequest, LogoutRequest, TokenResponse, RegisterResponse
 from src.models import Seller, RefreshToken
 from src.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from src.dependencies import get_current_user
@@ -13,7 +13,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 auth_router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 
-@auth_router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@auth_router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 async def register(req: RegisterRequest, session: AsyncSession = Depends(get_session)):
     stmt = select(Seller).where((Seller.email == req.email) | (Seller.inn == req.inn))
     result = await session.execute(stmt)
@@ -50,8 +50,17 @@ async def register(req: RegisterRequest, session: AsyncSession = Depends(get_ses
     session.add(rt)
     await session.commit()
 
-    return TokenResponse(
-        user_id=str(seller.id),
+    return RegisterResponse(
+        id=seller.id,
+        email=seller.email,
+        first_name=seller.first_name,
+        last_name=seller.last_name,
+        middle_name=seller.middle_name,
+        company_name=seller.company_name,
+        inn=seller.inn,
+        phone=seller.phone,
+        created_at=seller.created_at,
+        updated_at=seller.updated_at,
         access_token=access_token,
         refresh_token=refresh_token,
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
