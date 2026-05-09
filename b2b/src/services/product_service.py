@@ -5,6 +5,7 @@ from typing import Optional, List
 from src.models import Product, Category, ProductImage, ProductCharacteristic, SKU
 from src.schemas.product import ProductCreateRequest, ProductUpdateRequest
 from src.services.exceptions import CategoryNotFound, ProductNotFound, AccessDenied
+from sqlalchemy.orm import selectinload
 
 async def get_product_by_id(
     session: AsyncSession,
@@ -12,7 +13,11 @@ async def get_product_by_id(
     seller_id: Optional[UUID] = None
 ) -> Product:
     """Получить товар по ID. Если передан seller_id – проверить принадлежность."""
-    stmt = select(Product).where(Product.id == product_id)
+    stmt = select(Product).where(Product.id == product_id).options(
+            selectinload(Product.images),
+            selectinload(Product.characteristics),
+            selectinload(Product.skus),
+        )
     if seller_id:
         stmt = stmt.where(Product.seller_id == seller_id)
     result = await session.execute(stmt)
@@ -42,16 +47,17 @@ async def get_my_products(
 async def create_product(
     session: AsyncSession,
     seller_id: UUID,
-    request: ProductCreateRequest
+    request: ProductCreateRequest,
+    category_uuid: UUID
 ) -> Product:
-    cat_result = await session.execute(select(Category).where(Category.id == request.category_id))
+    cat_result = await session.execute(select(Category).where(Category.id == category_uuid))
     category = cat_result.scalar_one_or_none()
     if not category:
-        raise CategoryNotFound(f"Category {request.category_id} not found")
+        raise CategoryNotFound(f"Category {category_uuid} not found")
 
     product = Product(
         seller_id=seller_id,
-        category_id=request.category_id,
+        category_id=category_uuid,
         title=request.title,
         description=request.description,
         status="CREATED"
@@ -99,7 +105,7 @@ async def update_product(
         product.status = request.status
     await session.commit()
     await session.refresh(product, attribute_names=["images", "characteristics", "skus", "category"])
-    return product
+    return await get_product_by_id(session, product.id)
 
 async def delete_product(session: AsyncSession, product: Product) -> None:
     """Удалить товар (каскадно удалятся изображения, характеристики, SKU)."""

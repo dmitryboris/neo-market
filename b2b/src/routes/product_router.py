@@ -15,17 +15,45 @@ from src.services.image_service import add_product_image, update_product_image, 
 
 product_router = APIRouter(prefix="/api/products", tags=["Products"])
 
+def invalid_request(message: str) -> HTTPException:
+    return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"code": "INVALID_REQUEST", "message": message})
+
+def is_valid_uuid(val: str) -> bool:
+    try:
+        UUID(val)
+        return True
+    except (ValueError, AttributeError, TypeError):
+        return False
+
 @product_router.post("", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
 async def create_product_endpoint(
     request: ProductCreateRequest,
     session: AsyncSession = Depends(get_session),
     current_seller: Seller = Depends(get_current_user)
 ):
+    if not request.title or not request.title.strip():
+        raise invalid_request("title is required")
+    if len(request.title) > 255:
+        raise invalid_request("title must be 1-255 characters")
+
+    if not request.images:
+        raise invalid_request("At least one image is required")
+    
+    if request.category_id is None:
+        raise invalid_request("category_id is required")
+    
+    if not is_valid_uuid(request.category_id):
+        raise invalid_request("category_id must be a valid UUID")
+
+    category_uuid = UUID(request.category_id)
+
     try:
-        product = await product_service.create_product(session, current_seller.id, request)
+        product = await product_service.create_product(session, current_seller.id, request, category_uuid)
         return product
-    except CategoryNotFound as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except CategoryNotFound:
+        raise invalid_request("Category not found")
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 @product_router.get("/my", response_model=ProductMyListResponse)
 async def get_my_products(

@@ -30,17 +30,11 @@ class SKUShortResponse(BaseModel):
     article: str | None = None
 
 class ProductCreateRequest(BaseModel):
-    category_id: UUID
-    title: str = Field(..., min_length=1, max_length=255)
+    category_id: Optional[str] = None
+    title: str
     description: str = Field(..., min_length=1, max_length=5000)
-    images: List[ProductImageCreate] = Field(..., min_length=1, description="Хотя бы одно изображение")
+    images: List[ProductImageCreate] | None = None
     characteristics: Optional[List[ProductCharacteristicCreate]] = Field(default_factory=list)
-
-    @field_validator("images")
-    def images_not_empty(cls, v):
-        if not v:
-            raise ValueError("At least one image is required")
-        return v
 
 class ProductUpdateRequest(BaseModel):
     category_id: Optional[UUID] = None
