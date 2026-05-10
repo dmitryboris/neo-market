@@ -26,8 +26,7 @@ class SKUShortResponse(BaseModel):
     id: UUID
     name: str | None = None
     price: int
-    stock_quantity: int
-    article: str | None = None
+    active_quantity: int
 
 class ProductCreateRequest(BaseModel):
     category_id: Optional[str] = None

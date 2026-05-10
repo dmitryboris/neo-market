@@ -18,6 +18,9 @@ class InvoiceNotFound(Exception):
 class InvoiceAccessDenied(Exception):
     pass
 
+class ForbiddenOperation(Exception):
+    pass
+
 class InvoiceAlreadyAccepted(Exception):
     pass
 

@@ -10,6 +10,7 @@ from src.routes.upload_router import upload_router
 from src.routes.auth_router import auth_router
 from src.routes.seller_router import seller_router
 from src.routes.product_router import product_router
+from src.routes.sku_router import sku_router
 
 def run_migrations():
     alembic_cfg = Config("alembic.ini")
@@ -29,6 +30,7 @@ app.include_router(upload_router)
 app.include_router(auth_router)
 app.include_router(seller_router)
 app.include_router(product_router)
+app.include_router(sku_router)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

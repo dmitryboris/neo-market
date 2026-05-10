@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     MAX_FILE_SIZE: int = 5 * 1024 * 1024   # 5 MB
     UPLOAD_DIR: str = "uploads"
 
+    MODERATION_URL: str = "https://moderation.example.com"   # значение по умолчанию
+    B2B_TO_MOD_KEY: str = "change-me"
+
     @property
     def database_url(self) -> str:
         return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
