@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
+    ALLOWED_EXTENSIONS: set = {'.jpg', '.jpeg', '.png', '.webp', '.gif'}
+    MAX_FILE_SIZE: int = 5 * 1024 * 1024   # 5 MB
+    UPLOAD_DIR: str = "uploads"
+
     @property
     def database_url(self) -> str:
         return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"

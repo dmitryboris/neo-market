@@ -22,10 +22,13 @@ services:
       DB_NAME: ${DB_NAME}
       DB_PORT: ${DB_PORT}
       DB_HOST: b2b_db
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: ${JWT_ALGORITHM}
     depends_on:
       - b2b_db
     ports:
       - "8000:8000"
+    command: sh -c "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000"
 
 volumes:
   b2b_pg_data:

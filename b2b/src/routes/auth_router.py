@@ -2,17 +2,18 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
 from src.database import get_session
-from src.schemas.auth import RegisterRequest, LoginRequest, RefreshRequest, LogoutRequest, TokenResponse
+from src.schemas.auth import RegisterRequest, LoginRequest, RefreshRequest, LogoutRequest, TokenResponse, RegisterResponse
 from src.models import Seller, RefreshToken
 from src.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from src.dependencies import get_current_user
 from src.config import settings
 from sqlalchemy import select
+from fastapi.security import OAuth2PasswordRequestForm
 
 auth_router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 
-@auth_router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@auth_router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 async def register(req: RegisterRequest, session: AsyncSession = Depends(get_session)):
     stmt = select(Seller).where((Seller.email == req.email) | (Seller.inn == req.inn))
     result = await session.execute(stmt)
@@ -31,6 +32,7 @@ async def register(req: RegisterRequest, session: AsyncSession = Depends(get_ses
         first_name=req.first_name,
         last_name=req.last_name,
         phone=req.phone,
+        middle_name=req.middle_name
     )
     session.add(seller)
     await session.flush()
@@ -41,15 +43,24 @@ async def register(req: RegisterRequest, session: AsyncSession = Depends(get_ses
     decoded_refresh = decode_token(refresh_token)
     rt = RefreshToken(
         jti=decoded_refresh["jti"],
-        user_id=seller.id,
+        seller_id=seller.id,
         issued_at=datetime.fromtimestamp(decoded_refresh["iat"], tz=timezone.utc),
         expires_at=datetime.fromtimestamp(decoded_refresh["exp"], tz=timezone.utc),
     )
     session.add(rt)
     await session.commit()
 
-    return TokenResponse(
-        user_id=str(seller.id),
+    return RegisterResponse(
+        id=seller.id,
+        email=seller.email,
+        first_name=seller.first_name,
+        last_name=seller.last_name,
+        middle_name=seller.middle_name,
+        company_name=seller.company_name,
+        inn=seller.inn,
+        phone=seller.phone,
+        created_at=seller.created_at,
+        updated_at=seller.updated_at,
         access_token=access_token,
         refresh_token=refresh_token,
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
@@ -79,7 +90,7 @@ async def login(req: LoginRequest, session: AsyncSession = Depends(get_session))
     decoded_refresh = decode_token(refresh_token)
     rt = RefreshToken(
         jti=decoded_refresh["jti"],
-        user_id=seller.id,
+        seller_id=seller.id,
         issued_at=datetime.fromtimestamp(decoded_refresh["iat"], tz=timezone.utc),
         expires_at=datetime.fromtimestamp(decoded_refresh["exp"], tz=timezone.utc),
     )
@@ -110,7 +121,6 @@ async def refresh(req: RefreshRequest, session: AsyncSession = Depends(get_sessi
             detail={"code": "INVALID_TOKEN", "message": "Нет jti в refresh токене"},
         )
 
-    from sqlalchemy import select
     stmt = select(RefreshToken).where(RefreshToken.jti == jti)
     result = await session.execute(stmt)
     rt = result.scalars().first()
@@ -130,7 +140,7 @@ async def refresh(req: RefreshRequest, session: AsyncSession = Depends(get_sessi
     rt.revoked = True
     session.add(rt)
 
-    user_id = str(rt.user_id)
+    user_id = str(rt.seller_id)
     role = payload.get("role", "seller")
     new_access = create_access_token(user_id, role)
     new_refresh = create_refresh_token(user_id, role)
@@ -138,7 +148,7 @@ async def refresh(req: RefreshRequest, session: AsyncSession = Depends(get_sessi
     decoded_new = decode_token(new_refresh)
     new_rt = RefreshToken(
         jti=decoded_new["jti"],
-        user_id=rt.user_id,
+        seller_id=rt.seller_id,
         issued_at=datetime.fromtimestamp(decoded_new["iat"], tz=timezone.utc),
         expires_at=datetime.fromtimestamp(decoded_new["exp"], tz=timezone.utc),
     )
@@ -171,7 +181,6 @@ async def logout(req: LogoutRequest, current_user: Seller = Depends(get_current_
 
     jti = payload.get("jti")
     if jti:
-        from sqlalchemy import select
         stmt = select(RefreshToken).where(RefreshToken.jti == jti)
         result = await session.execute(stmt)
         rt = result.scalars().first()
@@ -180,3 +189,8 @@ async def logout(req: LogoutRequest, current_user: Seller = Depends(get_current_
             session.add(rt)
             await session.commit()
     return
+
+@auth_router.post("/token", response_model=TokenResponse)
+async def login_form(form_data: OAuth2PasswordRequestForm = Depends(), session: AsyncSession = Depends(get_session)):
+    req = LoginRequest(email=form_data.username, password=form_data.password)
+    return await login(req, session)

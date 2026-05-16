@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr, field_validator
 import re
+from src.schemas.seller import SellerResponse
 
 
 class RegisterRequest(BaseModel):
@@ -10,6 +11,7 @@ class RegisterRequest(BaseModel):
     first_name: str
     last_name: str
     phone: str | None = None
+    middle_name: str | None = None
 
     @field_validator("password")
     @classmethod
@@ -34,6 +36,12 @@ class LogoutRequest(BaseModel):
 
 class TokenResponse(BaseModel):
     user_id: str
+    access_token: str
+    refresh_token: str
+    token_type: str = "Bearer"
+    expires_in: int
+
+class RegisterResponse(SellerResponse):
     access_token: str
     refresh_token: str
     token_type: str = "Bearer"
