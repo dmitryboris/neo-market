@@ -16,7 +16,8 @@ async def get_product_by_id(
     stmt = select(Product).where(Product.id == product_id).options(
             selectinload(Product.images),
             selectinload(Product.characteristics),
-            selectinload(Product.skus),
+            selectinload(Product.skus).selectinload(SKU.images),
+            selectinload(Product.skus).selectinload(SKU.characteristics),
         )
     if seller_id:
         stmt = stmt.where(Product.seller_id == seller_id)

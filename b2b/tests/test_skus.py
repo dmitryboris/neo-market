@@ -63,14 +63,13 @@ async def test_first_sku_transitions_product_to_on_moderation(client, valid_sku_
             discount=0,
             active_quantity=0,
             reserved_quantity=0,
-            image=valid_sku_payload["image"],
             characteristics=[],
             images=[],
             created_at=datetime.now(),
             updated_at=datetime.now()
         )
         mock_create.return_value = expected
-        response = await client.post("/api/v1/skus/create", json=valid_sku_payload)
+        response = await client.post("/api/v1/skus", json=valid_sku_payload)
         assert response.status_code == 201
         data = response.json()
         assert data["name"] == valid_sku_payload["name"]
@@ -97,14 +96,14 @@ async def test_second_sku_no_state_change(client, valid_sku_payload):
             updated_at=datetime.now()
         )
         mock_create.return_value = expected
-        response = await client.post("/api/v1/skus/create", json=valid_sku_payload)
+        response = await client.post("/api/v1/skus", json=valid_sku_payload)
         assert response.status_code == 201
 
 @pytest.mark.asyncio
 async def test_add_sku_to_hard_blocked_returns_403(client, valid_sku_payload):
     with patch("src.services.sku_service.create_sku", new_callable=AsyncMock) as mock_create:
         mock_create.side_effect = ForbiddenOperation("Cannot add SKU to hard-blocked product")
-        response = await client.post("/api/v1/skus/create", json=valid_sku_payload)
+        response = await client.post("/api/v1/skus", json=valid_sku_payload)
         assert response.status_code == 403
         assert "hard-blocked" in response.text.lower()
 
@@ -112,6 +111,6 @@ async def test_add_sku_to_hard_blocked_returns_403(client, valid_sku_payload):
 async def test_missing_image_returns_400(client, valid_sku_payload):
     payload = valid_sku_payload.copy()
     payload.pop("image")
-    response = await client.post("/api/v1/skus/create", json=payload)
+    response = await client.post("/api/v1/skus", json=payload)
     assert response.status_code == 400
     assert "image" in response.text.lower()

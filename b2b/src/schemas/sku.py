@@ -36,7 +36,6 @@ class SKUResponse(BaseModel):
     discount: int
     active_quantity: int
     reserved_quantity: int
-    image: Optional[str] = None
     characteristics: List[SKUCharacteristicResponse] = []
     images: List[SKUImageResponse] = []
     created_at: datetime
@@ -46,9 +45,3 @@ class SKUUpdateRequest(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     price: Optional[int] = Field(None, gt=0)
     discount: Optional[int] = Field(None, ge=0)
-
-class SKUShortResponse(BaseModel):
-    id: UUID
-    name: str
-    price: int
-    active_quantity: int

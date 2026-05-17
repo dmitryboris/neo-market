@@ -6,11 +6,11 @@ from src.dependencies import get_current_user
 from src.models import Seller
 from src.schemas.sku import SKUCreateRequest, SKUResponse, SKUUpdateRequest
 from src.services import sku_service
-from src.services.exceptions import ProductNotFound, AccessDenied, ForbiddenOperation
+from src.services.exceptions import ProductNotFound, ForbiddenOperation
 from src.services.image_service import add_sku_image, update_sku_image, delete_sku_image
 from src.schemas.image import SKUImageResponse, SKUImageCreateRequest, SKUImageUpdateRequest
 
-sku_router = APIRouter(prefix="/api/v1/skus", tags=["SKU"])
+sku_router = APIRouter(prefix="/skus", tags=["SKU"])
 
 def invalid_request(message: str) -> HTTPException:
     return HTTPException(
@@ -18,7 +18,7 @@ def invalid_request(message: str) -> HTTPException:
         detail={"code": "INVALID_REQUEST", "message": message}
     )
 
-@sku_router.post("/create", response_model=SKUResponse, status_code=status.HTTP_201_CREATED)
+@sku_router.post("", response_model=SKUResponse, status_code=status.HTTP_201_CREATED)
 async def create_sku_endpoint(
     request: SKUCreateRequest,
     session: AsyncSession = Depends(get_session),
@@ -41,14 +41,6 @@ async def create_sku_endpoint(
     except ForbiddenOperation as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail={"code": "FORBIDDEN", "message": str(e)})
 
-@sku_router.get("/by-product/{product_id}", response_model=list[SKUResponse])
-async def get_skus_by_product(
-    product_id: UUID,
-    session: AsyncSession = Depends(get_session),
-    current_seller: Seller = Depends(get_current_user),
-):
-    skus = await sku_service.get_skus_by_product(session, product_id, current_seller.id)
-    return skus
 
 @sku_router.get("/{sku_id}", response_model=SKUResponse)
 async def get_sku(
