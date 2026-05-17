@@ -3,11 +3,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_session
-from src.models import Seller, RefreshToken
-from src.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
+from src.models import Seller
+from src.security import decode_token
 from src.dependencies import get_current_user
-from src.config import settings
-from src.services.auth_service import register, login, logout, get_token, refresh_token, get_seller
+from src.services.auth_service import register_seller, login_seller, logout_seller, get_token, refresh_token, get_seller
 from src.schemas.auth import RegisterResponse, RegisterRequest, LoginRequest, TokenResponse, RefreshRequest, \
     LogoutRequest
 
@@ -30,7 +29,7 @@ async def register(
             status_code=status.HTTP_409_CONFLICT,
             detail={"code": "EMAIL_OR_INN_EXISTS", "message": "Email или ИНН уже зарегистрированы"},
         )
-    return await register(request, session)
+    return await register_seller(request, session)
 
 
 @auth_router.post(
@@ -41,7 +40,7 @@ async def login(
         request: LoginRequest,
         session: AsyncSession = Depends(get_session)
 ):
-    return await login(request, session)
+    return await login_seller(request, session)
 
 
 @auth_router.post(
@@ -105,7 +104,7 @@ async def logout(
             detail={"code": "INVALID_TOKEN", "message": "Refresh токен не принадлежит текущему пользователю"},
         )
 
-    return await logout(payload, session)
+    return await logout_seller(payload, session)
 
 
 @auth_router.post(
@@ -117,4 +116,4 @@ async def login_form(
         session: AsyncSession = Depends(get_session)
 ):
     request = LoginRequest(email=form_data.username, password=form_data.password)
-    return await login(request, session)
+    return await login_seller(request, session)

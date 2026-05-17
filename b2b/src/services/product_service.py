@@ -3,7 +3,7 @@ from sqlalchemy import select, func
 from uuid import UUID
 from typing import Optional, List
 from src.models import Product, Category, ProductImage, ProductCharacteristic, SKU
-from src.schemas.product import ProductCreateRequest, ProductUpdateRequest
+from src.schemas.product import ProductCreateRequest, ProductUpdateRequest, ProductShortResponse, ProductPaginatedResponse, ProductStatus
 from src.services.exceptions import CategoryNotFound, ProductNotFound, AccessDenied
 from sqlalchemy.orm import selectinload
 
@@ -32,17 +32,26 @@ async def get_my_products(
     session: AsyncSession,
     seller_id: UUID,
     limit: int = 20,
-    offset: int = 0
-) -> dict:
-    """Список товаров продавца с пагинацией."""
-    total_result = await session.execute(
-        select(func.count(Product.id)).where(Product.seller_id == seller_id)
+    offset: int = 0,
+    status: ProductStatus | None = None,
+    include_deleted: bool = False,
+) -> ProductPaginatedResponse:
+    query = select(Product).where(Product.seller_id == seller_id)
+    if status:
+        query = query.where(Product.status == status)
+    if not include_deleted:
+        query = query.where(Product.deleted == False)
+    total = await session.scalar(select(func.count()).select_from(query.subquery()))
+    query = query.order_by(Product.created_at.desc()).limit(limit).offset(offset)
+    result = await session.execute(query.options(selectinload(Product.images)))
+    items = result.scalars().all()
+    short_items = [ProductShortResponse.model_validate(p) for p in items]
+    return ProductPaginatedResponse(
+        total_count=total,
+        items=short_items,
+        limit=limit,
+        offset=offset,
     )
-    total = total_result.scalar_one()
-    stmt = select(Product).where(Product.seller_id == seller_id).order_by(Product.created_at.desc()).limit(limit).offset(offset)
-    result = await session.execute(stmt)
-    products = result.scalars().all()
-    return {"total": total, "items": products}
 
 async def create_product(
     session: AsyncSession,

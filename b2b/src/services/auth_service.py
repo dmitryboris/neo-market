@@ -17,7 +17,7 @@ async def get_seller(request: RegisterRequest, session: AsyncSession = Depends(g
     return result.scalars().first()
 
 
-async def register(request: RegisterRequest, session: AsyncSession = Depends(get_session)):
+async def register_seller(request: RegisterRequest, session: AsyncSession = Depends(get_session)):
     seller = Seller(
         email=request.email,
         password_hash=hash_password(request.password),
@@ -62,7 +62,7 @@ async def register(request: RegisterRequest, session: AsyncSession = Depends(get
     )
 
 
-async def login(request: LoginRequest, session: AsyncSession):
+async def login_seller(request: LoginRequest, session: AsyncSession):
     stmt = select(Seller).where(Seller.email == request.email)
     result = await session.execute(stmt)
     seller = result.scalars().first()
@@ -133,7 +133,7 @@ async def refresh_token(rt: Row | RowMapping, payload: dict, session: AsyncSessi
     )
 
 
-async def logout(payload: dict, session: AsyncSession):
+async def logout_seller(payload: dict, session: AsyncSession):
     jti = payload.get("jti")
     if jti:
         stmt = select(RefreshToken).where(RefreshToken.jti == jti)

@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, ConfigDict, field_validator
 from uuid import UUID
 from datetime import datetime
 from typing import List, Optional
+from src.models.product import ProductStatus
 
 class ProductImageResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -31,7 +32,7 @@ class SKUShortResponse(BaseModel):
 
 class ProductCreateRequest(BaseModel):
     category_id: Optional[str] = None
-    title: str
+    title: Optional[str] = None
     description: str = Field(..., min_length=1, max_length=5000)
     images: List[ProductImageCreate] | None = None
     characteristics: Optional[List[ProductCharacteristicCreate]] = Field(default_factory=list)
@@ -49,23 +50,12 @@ class ProductResponse(BaseModel):
     category_id: UUID
     title: str
     description: str | None = None
-    status: str
+    status: ProductStatus
     images: List[ProductImageResponse]
     characteristics: List[ProductCharacteristicResponse]
     skus: List[SKUShortResponse]
     created_at: datetime
     updated_at: datetime
-
-class ProductMyItemResponse(BaseModel):
-    id: UUID
-    title: str
-    status: str
-    category_id: UUID
-    created_at: datetime
-
-class ProductMyListResponse(BaseModel):
-    total: int
-    items: List[ProductMyItemResponse]
 
 class ProductImageUpdateRequest(BaseModel):
     url: Optional[str] = None
@@ -74,3 +64,20 @@ class ProductImageUpdateRequest(BaseModel):
 class ProductImageCreateRequest(BaseModel):
     url: str
     ordering: int = 0
+
+class ProductShortResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    title: str
+    status: ProductStatus
+    category_id: UUID
+    deleted: bool
+    created_at: datetime
+    min_price: int | None = None
+    cover_image: str | None = None
+
+class ProductPaginatedResponse(BaseModel):
+    total_count: int
+    items: list[ProductShortResponse]
+    limit: int
+    offset: int
