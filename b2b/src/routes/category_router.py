@@ -12,17 +12,18 @@ category_router = APIRouter(prefix="/categories", tags=["Categories"])
 
 @category_router.get("", response_model=list[CategoryResponse], summary="List categories")
 async def get_categories(
-    parent_id: UUID | None = None,
-    only_root: bool = False,
-    session: AsyncSession = Depends(get_session)
+        parent_id: UUID | None = None,
+        only_root: bool = False,
+        session: AsyncSession = Depends(get_session)
 ):
     return await category_service.get_categories(session, parent_id, only_root)
 
 
-@category_router.get("/{category_id}", response_model=CategoryWithChildrenResponse, summary="Get category with subcategories")
+@category_router.get("/{category_id}", response_model=CategoryWithChildrenResponse,
+                     summary="Get category with subcategories")
 async def get_category(
-    category_id: UUID,
-    session: AsyncSession = Depends(get_session)
+        category_id: UUID,
+        session: AsyncSession = Depends(get_session)
 ):
     category = await category_service.get_category_by_id(session, category_id)
     if not category:
@@ -40,9 +41,9 @@ async def get_category(
     summary="Create category"
 )
 async def create_category(
-    request: CategoryCreate,
-    session: AsyncSession = Depends(get_session),
-    _: None = Depends(get_current_user)
+        request: CategoryCreate,
+        session: AsyncSession = Depends(get_session),
+        _: None = Depends(get_current_user)
 ):
     try:
         return await category_service.create_category(session, request)
@@ -56,10 +57,10 @@ async def create_category(
     summary="Update category"
 )
 async def update_category(
-    category_id: UUID,
-    request: CategoryUpdate,
-    session: AsyncSession = Depends(get_session),
-    _: None = Depends(get_current_user)
+        category_id: UUID,
+        request: CategoryUpdate,
+        session: AsyncSession = Depends(get_session),
+        _: None = Depends(get_current_user)
 ):
     category = await category_service.get_category_by_id(session, category_id)
     if not category:
@@ -78,9 +79,9 @@ async def update_category(
     summary="Delete category",
 )
 async def delete_category(
-    category_id: UUID,
-    session: AsyncSession = Depends(get_session),
-    _: None = Depends(get_current_user),
+        category_id: UUID,
+        session: AsyncSession = Depends(get_session),
+        _: None = Depends(get_current_user),
 ):
     category = await category_service.get_category_by_id(session, category_id)
     if not category:

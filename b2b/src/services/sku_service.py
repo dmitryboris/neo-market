@@ -1,7 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from b2b.src.models.sku import SKU, SKUCharacteristic
 from b2b.src.schemas.sku import SKUCreate, SKUUpdate
- 
+
+
 async def create_sku(db: AsyncSession, data: SKUCreate) -> SKU:
     sku = SKU(
         product_id=data.product_id,
@@ -15,7 +16,8 @@ async def create_sku(db: AsyncSession, data: SKUCreate) -> SKU:
     await db.commit()
     await db.refresh(sku)
     return sku
- 
+
+
 async def update_sku(db: AsyncSession, sku_id: int, data: SKUUpdate) -> SKU | None:
     sku = await db.get(SKU, sku_id)
     if not sku:

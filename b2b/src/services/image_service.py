@@ -21,6 +21,7 @@ async def _get_product_with_access(session: AsyncSession, product_id: UUID, sell
         raise ProductNotFound("Product not found or access denied")
     return product
 
+
 async def _get_sku_with_access(session: AsyncSession, sku_id: UUID, seller_id: UUID) -> SKU:
     result = await session.execute(
         select(SKU)
@@ -32,6 +33,7 @@ async def _get_sku_with_access(session: AsyncSession, sku_id: UUID, seller_id: U
         raise SKUNotFound("SKU not found or access denied")
     return sku
 
+
 async def _get_product_image_with_access(session: AsyncSession, image_id: UUID, seller_id: UUID) -> ProductImage:
     result = await session.execute(
         select(ProductImage)
@@ -42,6 +44,7 @@ async def _get_product_image_with_access(session: AsyncSession, image_id: UUID, 
     if not image:
         raise ImageNotFound("Product image not found or access denied")
     return image
+
 
 async def _get_sku_image_with_access(session: AsyncSession, image_id: UUID, seller_id: UUID) -> SKUImage:
     result = await session.execute(
@@ -57,11 +60,11 @@ async def _get_sku_image_with_access(session: AsyncSession, image_id: UUID, sell
 
 
 async def add_product_image(
-    session: AsyncSession,
-    product_id: UUID,
-    seller_id: UUID,
-    url: str,
-    ordering: int = 0
+        session: AsyncSession,
+        product_id: UUID,
+        seller_id: UUID,
+        url: str,
+        ordering: int = 0
 ) -> ProductImage:
     await _get_product_with_access(session, product_id, seller_id)
     image = ProductImage(product_id=product_id, url=url, ordering=ordering)
@@ -70,12 +73,13 @@ async def add_product_image(
     await session.refresh(image)
     return image
 
+
 async def update_product_image(
-    session: AsyncSession,
-    image_id: UUID,
-    seller_id: UUID,
-    url: str | None = None,
-    ordering: int | None = None
+        session: AsyncSession,
+        image_id: UUID,
+        seller_id: UUID,
+        url: str | None = None,
+        ordering: int | None = None
 ) -> ProductImage:
     if url is None and ordering is None:
         raise NoFieldsToUpdate("At least one field (url or ordering) must be provided")
@@ -88,16 +92,18 @@ async def update_product_image(
     await session.refresh(image)
     return image
 
+
 async def update_product_image_ordering(
-    session: AsyncSession,
-    image_id: UUID,
-    ordering: int,
-    seller_id: UUID
+        session: AsyncSession,
+        image_id: UUID,
+        ordering: int,
+        seller_id: UUID
 ) -> ProductImage:
     return await update_product_image(
         session=session, image_id=image_id,
         seller_id=seller_id, ordering=ordering
     )
+
 
 async def delete_product_image(session: AsyncSession, image_id: UUID, seller_id: UUID):
     image = await _get_product_image_with_access(session, image_id, seller_id)
@@ -106,12 +112,13 @@ async def delete_product_image(session: AsyncSession, image_id: UUID, seller_id:
     await session.commit()
     delete_file_from_disk(url)
 
+
 # ----- public API for SKU images -----
 async def add_sku_image(
-    session: AsyncSession,
-    sku_id: UUID,
-    seller_id: UUID, url: str,
-    ordering: int = 0
+        session: AsyncSession,
+        sku_id: UUID,
+        seller_id: UUID, url: str,
+        ordering: int = 0
 ) -> SKUImage:
     await _get_sku_with_access(session, sku_id, seller_id)
     image = SKUImage(sku_id=sku_id, url=url, ordering=ordering)
@@ -120,12 +127,13 @@ async def add_sku_image(
     await session.refresh(image)
     return image
 
+
 async def update_sku_image(
-    session: AsyncSession,
-    image_id: UUID,
-    seller_id: UUID,
-    url: str | None = None,
-    ordering: int | None = None
+        session: AsyncSession,
+        image_id: UUID,
+        seller_id: UUID,
+        url: str | None = None,
+        ordering: int | None = None
 ) -> SKUImage:
     if url is None and ordering is None:
         raise NoFieldsToUpdate("At least one field (url or ordering) must be provided")
@@ -138,16 +146,18 @@ async def update_sku_image(
     await session.refresh(image)
     return image
 
+
 async def update_sku_image_ordering(
-    session: AsyncSession,
-    image_id: UUID,
-    ordering: int,
-    seller_id: UUID
+        session: AsyncSession,
+        image_id: UUID,
+        ordering: int,
+        seller_id: UUID
 ) -> SKUImage:
     return await update_sku_image(
         session=session, image_id=image_id,
         seller_id=seller_id, ordering=ordering
     )
+
 
 async def delete_sku_image(session: AsyncSession, image_id: UUID, seller_id: UUID):
     image = await _get_sku_image_with_access(session, image_id, seller_id)
