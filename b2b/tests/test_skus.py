@@ -46,7 +46,7 @@ def valid_sku_payload():
         "price": 10000,
         "cost_price": 5000,
         "discount": 0,
-        "image": "http://example.com/img.jpg",
+        "images": [{"url": "url", "ordering": 0}],
         "characteristics": [{"name": "Color", "value": "Black"}]
     }
 
@@ -63,6 +63,8 @@ async def test_first_sku_transitions_product_to_on_moderation(client, valid_sku_
             discount=0,
             active_quantity=0,
             reserved_quantity=0,
+            stock_quantity=0,
+            article=None,
             characteristics=[],
             images=[],
             created_at=datetime.now(),
@@ -87,9 +89,10 @@ async def test_second_sku_no_state_change(client, valid_sku_payload):
             price=10000,
             cost_price=5000,
             discount=0,
+            stock_quantity=0,
             active_quantity=0,
             reserved_quantity=0,
-            image=valid_sku_payload["image"],
+            article=None,
             characteristics=[],
             images=[],
             created_at=datetime.now(),
@@ -110,7 +113,7 @@ async def test_add_sku_to_hard_blocked_returns_403(client, valid_sku_payload):
 @pytest.mark.asyncio
 async def test_missing_image_returns_400(client, valid_sku_payload):
     payload = valid_sku_payload.copy()
-    payload.pop("image")
+    payload["images"] = []
     response = await client.post("/api/v1/skus", json=payload)
     assert response.status_code == 400
     assert "image" in response.text.lower()

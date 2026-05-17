@@ -1,7 +1,8 @@
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 from uuid import UUID
 from datetime import datetime
 from typing import List, Optional
+from src.schemas.image import SKUImageCreateRequest
 
 class SKUCharacteristicCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
@@ -23,7 +24,8 @@ class SKUCreateRequest(BaseModel):
     price: int | None = None
     cost_price: int | None = None
     discount: int = 0
-    image: str | None = None
+    article: str | None = Field(None, max_length=100)
+    images: list[SKUImageCreateRequest] = Field(default_factory=list)
     characteristics: Optional[List[SKUCharacteristicCreate]] = Field(default_factory=list)
 
 class SKUResponse(BaseModel):
@@ -34,8 +36,10 @@ class SKUResponse(BaseModel):
     price: int
     cost_price: int
     discount: int
+    stock_quantity: int
     active_quantity: int
     reserved_quantity: int
+    article: str | None = None
     characteristics: List[SKUCharacteristicResponse] = []
     images: List[SKUImageResponse] = []
     created_at: datetime

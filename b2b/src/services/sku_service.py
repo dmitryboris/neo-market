@@ -59,12 +59,15 @@ async def create_sku(
         discount=request.discount,
         active_quantity=0,
         reserved_quantity=0,
+        stock_quantity=0,
+        article=request.article,
     )
     session.add(sku)
     await session.flush()
 
-    main_image = SKUImage(sku_id=sku.id, url=request.image, ordering=0)
-    session.add(main_image)
+    for idx, img in enumerate(request.images):
+        sku_image = SKUImage(sku_id=sku.id, url=img.url, ordering=img.ordering)
+        session.add(sku_image)
 
     for ch in request.characteristics:
         char = SKUCharacteristic(
