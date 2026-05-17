@@ -72,12 +72,12 @@ async def delete_category(session: AsyncSession, category: Category):
     )
     if product_exists:
         raise CategoryHasProducts("Category contains products and cannot be deleted")
-    
+
     child_exists = await session.scalar(
         select(Category.id).where(Category.parent_id == category.id).limit(1)
     )
     if child_exists:
         raise CategoryHasChildren("Category contains subcategories and cannot be deleted")
-    
+
     await session.delete(category)
     await session.commit()

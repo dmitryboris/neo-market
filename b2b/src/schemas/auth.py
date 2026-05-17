@@ -9,9 +9,9 @@ class RegisterRequest(BaseModel):
     company_name: str
     inn: str
     first_name: str
+    middle_name: str | None = None
     last_name: str
     phone: str | None = None
-    middle_name: str | None = None
 
     @field_validator("password")
     @classmethod

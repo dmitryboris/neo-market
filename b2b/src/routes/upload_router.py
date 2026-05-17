@@ -6,14 +6,15 @@ from src.schemas.upload import UploadResponse
 
 upload_router = APIRouter(prefix="/upload", tags=["Upload"])
 
+
 @upload_router.post(
     "/image", response_model=UploadResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Upload image",
 )
 async def upload_image_endpoint(
-    file: UploadFile = File(...),
-    _=Depends(get_current_user)
+        file: UploadFile = File(...),
+        _=Depends(get_current_user)
 ):
     try:
         url = await file_service.upload_image(file)
