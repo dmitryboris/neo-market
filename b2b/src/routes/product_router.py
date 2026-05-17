@@ -6,14 +6,14 @@ from src.dependencies import get_current_user
 from src.models import Seller
 from src.schemas.product import (
     ProductCreateRequest, ProductResponse, ProductUpdateRequest,
-    ProductMyListResponse, ProductImageUpdateRequest, ProductImageCreateRequest,
-    ProductImageResponse
+    ProductPaginatedResponse, ProductImageUpdateRequest, ProductImageCreateRequest,
+    ProductImageResponse, ProductStatus
 )
 from src.services import product_service
 from src.services.exceptions import CategoryNotFound, ProductNotFound, AccessDenied
 from src.services.image_service import add_product_image, update_product_image, delete_product_image
 
-product_router = APIRouter(prefix="/api/products", tags=["Products"])
+product_router = APIRouter(prefix="/products", tags=["Products"])
 
 def invalid_request(message: str) -> HTTPException:
     return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"code": "INVALID_REQUEST", "message": message})
@@ -55,14 +55,16 @@ async def create_product_endpoint(
     except Exception:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
-@product_router.get("/my", response_model=ProductMyListResponse)
+@product_router.get("", response_model=ProductPaginatedResponse)
 async def get_my_products(
     limit: int = 20,
     offset: int = 0,
+    status: ProductStatus | None = None,
+    include_deleted: bool = False,
     session: AsyncSession = Depends(get_session),
     current_seller: Seller = Depends(get_current_user)
 ):
-    data = await product_service.get_my_products(session, current_seller.id, limit, offset)
+    data = await product_service.get_my_products(session, current_seller.id, limit, offset, status, include_deleted)
     return data
 
 @product_router.get("/{product_id}", response_model=ProductResponse)

@@ -66,7 +66,7 @@ async def test_create_product_201(client, valid_payload):
             updated_at=datetime.now(),
         )
         mock.return_value = expected
-        response = await client.post("/api/products", json=valid_payload)
+        response = await client.post("/api/v1/products", json=valid_payload)
         assert response.status_code == 201
         data = response.json()
         assert data["status"] == "CREATED"
@@ -90,7 +90,7 @@ async def test_seller_id_from_jwt(client, valid_payload):
             updated_at=datetime.now(),
         )
         mock.return_value = expected
-        response = await client.post("/api/products", json=valid_payload)
+        response = await client.post("/api/v1/products", json=valid_payload)
         assert response.status_code == 201
         assert response.json()["seller_id"] == str(TEST_SELLER_ID)
 
@@ -98,7 +98,7 @@ async def test_seller_id_from_jwt(client, valid_payload):
 async def test_missing_images_400(client, valid_payload):
     payload = valid_payload.copy()
     payload.pop("images")
-    response = await client.post("/api/products", json=payload)
+    response = await client.post("/api/v1/products", json=payload)
     assert response.status_code == 400
     assert "image" in response.text.lower()
 
@@ -106,7 +106,7 @@ async def test_missing_images_400(client, valid_payload):
 async def test_missing_category_400(client, valid_payload):
     payload = valid_payload.copy()
     payload.pop("category_id")
-    response = await client.post("/api/products", json=payload)
+    response = await client.post("/api/v1/products", json=payload)
     assert response.status_code == 400
     assert "category" in response.text.lower()
 
@@ -114,6 +114,6 @@ async def test_missing_category_400(client, valid_payload):
 async def test_invalid_category_id_400(client, valid_payload):
     with patch("src.services.product_service.create_product", new_callable=AsyncMock) as mock:
         mock.side_effect = CategoryNotFound("Category not found")
-        response = await client.post("/api/products", json=valid_payload)
+        response = await client.post("/api/v1/products", json=valid_payload)
         assert response.status_code == 400
         assert "category not found" in response.text.lower()
