@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 import enum
 import uuid
-from sqlalchemy import ForeignKey, Enum, String, Text
+from sqlalchemy import ForeignKey, Enum, String, Text, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from src.database import Base, TimestampMixin
@@ -38,11 +38,13 @@ class Product(Base, TimestampMixin):
         ForeignKey("categories.id", ondelete="RESTRICT"),
         nullable=False, index=True
     )
-    title: Mapped[str] = mapped_column(String(500), nullable=False)
-    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=True)
     status: Mapped[ProductStatus] = mapped_column(
         Enum(ProductStatus), nullable=False, default=ProductStatus.CREATED, index=True
     )
+    deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    blocked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     seller: Mapped["Seller"] = relationship(back_populates="products")
     category: Mapped["Category"] = relationship(back_populates="products")

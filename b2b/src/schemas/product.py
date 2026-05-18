@@ -1,50 +1,83 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
+from uuid import UUID
+from datetime import datetime
 from typing import List, Optional
-from b2b.src.models.product import ProductStatus
- 
-class CategoryResponse(BaseModel):
-    id: int
-    name: str
-    model_config = ConfigDict(from_attributes=True)
- 
+from src.models.product import ProductStatus
+
 class ProductImageResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
     url: str
     ordering: int
-    model_config = ConfigDict(from_attributes=True)
- 
-class CharacteristicResponse(BaseModel):
+
+class ProductImageCreate(BaseModel):
+    url: str = Field(..., description="Ссылка на изображение")
+    ordering: int = Field(..., ge=0, description="Порядок отображения")
+
+class ProductCharacteristicResponse(BaseModel):
+    id: UUID
     name: str
     value: str
-    model_config = ConfigDict(from_attributes=True)
- 
-class SKUResponse(BaseModel):
-    id: int
-    name: str
+
+class ProductCharacteristicCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    value: str = Field(..., min_length=1, max_length=500)
+
+class SKUShortResponse(BaseModel):
+    id: UUID
+    name: str | None = None
     price: int
-    active_quantity: int
-    characteristics: List[CharacteristicResponse]
-    model_config = ConfigDict(from_attributes=True)
- 
-class ProductResponse(BaseModel):
-    id: int
-    title: str
-    description: Optional[str]
-    status: ProductStatus
-    category: CategoryResponse
-    images: List[ProductImageResponse]
-    characteristics: List[CharacteristicResponse]
-    skus: List[SKUResponse]
-    model_config = ConfigDict(from_attributes=True)
- 
-class ProductCreate(BaseModel):
-    title: str
-    description: Optional[str] = None
-    category_id: int
-    characteristics: List[CharacteristicResponse] = []
-    images: List[str] = []  # список URL
- 
-class ProductUpdate(BaseModel):
+    stock_quantity: int
+    article: str | None = None
+
+class ProductCreateRequest(BaseModel):
+    category_id: Optional[str] = None
     title: Optional[str] = None
-    description: Optional[str] = None
-    category_id: Optional[int] = None
-    status: Optional[ProductStatus] = None
+    description: str = Field(..., min_length=1, max_length=5000)
+    images: List[ProductImageCreate] | None = None
+    characteristics: Optional[List[ProductCharacteristicCreate]] = Field(default_factory=list)
+
+class ProductUpdateRequest(BaseModel):
+    category_id: Optional[UUID] = None
+    title: Optional[str] = Field(None, min_length=1, max_length=255)
+    description: Optional[str] = Field(None, min_length=1, max_length=5000)
+    status: Optional[str] = None
+
+class ProductResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    seller_id: UUID
+    category_id: UUID
+    title: str
+    description: str | None = None
+    status: ProductStatus
+    images: List[ProductImageResponse]
+    characteristics: List[ProductCharacteristicResponse]
+    skus: List[SKUShortResponse]
+    created_at: datetime
+    updated_at: datetime
+
+class ProductImageUpdateRequest(BaseModel):
+    url: Optional[str] = None
+    ordering: Optional[int] = Field(None, ge=0)
+
+class ProductImageCreateRequest(BaseModel):
+    url: str
+    ordering: int = 0
+
+class ProductShortResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    title: str
+    status: ProductStatus
+    category_id: UUID
+    deleted: bool
+    created_at: datetime
+    min_price: int | None = None
+    cover_image: str | None = None
+
+class ProductPaginatedResponse(BaseModel):
+    total_count: int
+    items: list[ProductShortResponse]
+    limit: int
+    offset: int
