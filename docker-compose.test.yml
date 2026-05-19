@@ -14,8 +14,8 @@ services:
       dockerfile: b2b/Dockerfile.test
     env_file:
       - .env.test
-    #depends_on:
-    #  - test_db
+    depends_on:
+      - test_db
     volumes:
       - ./b2b/src:/app/src
       - ./b2b/tests:/app/tests
