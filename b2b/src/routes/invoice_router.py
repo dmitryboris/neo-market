@@ -13,19 +13,19 @@ invoice_router = APIRouter(prefix="/invoices", tags=["Invoices"])
 
 @invoice_router.get("", response_model=InvoiceListResponse, summary="List invoices")
 async def get_invoices(
-    limit: int = 20,
-    offset: int = 0,
-    session: AsyncSession = Depends(get_session),
-    current_seller: Seller = Depends(get_current_user)
+        limit: int = 20,
+        offset: int = 0,
+        session: AsyncSession = Depends(get_session),
+        current_seller: Seller = Depends(get_current_user)
 ):
     return await invoice_service.get_invoices(session, current_seller.id, limit, offset)
 
 
 @invoice_router.get("/{invoice_id}", response_model=InvoiceResponse, summary="Get invoice")
 async def get_invoice(
-    invoice_id: UUID,
-    session: AsyncSession = Depends(get_session),
-    current_seller: Seller = Depends(get_current_user)
+        invoice_id: UUID,
+        session: AsyncSession = Depends(get_session),
+        current_seller: Seller = Depends(get_current_user)
 ):
     try:
         return await invoice_service.get_invoice_by_id(session, invoice_id, seller_id=current_seller.id)
@@ -41,9 +41,9 @@ async def get_invoice(
     summary="Create invoice"
 )
 async def create_invoice(
-    request: InvoiceCreate,
-    session: AsyncSession = Depends(get_session),
-    current_seller: Seller = Depends(get_current_user)
+        request: InvoiceCreate,
+        session: AsyncSession = Depends(get_session),
+        current_seller: Seller = Depends(get_current_user)
 ):
     try:
         return await invoice_service.create_invoice(session, current_seller, request)
@@ -61,9 +61,9 @@ async def create_invoice(
     summary="Accept invoice – increase SKU stock"
 )
 async def accept_invoice(
-    invoice_id: UUID,
-    session: AsyncSession = Depends(get_session),
-    current_seller: Seller = Depends(get_current_user),
+        invoice_id: UUID,
+        session: AsyncSession = Depends(get_session),
+        current_seller: Seller = Depends(get_current_user),
 ):
     try:
         return await invoice_service.accept_invoice(session, invoice_id, current_seller)
@@ -75,16 +75,17 @@ async def accept_invoice(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except exc.SKUNotFound as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    
+
+
 @invoice_router.delete(
     "/{invoice_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete invoice (only CREATED status)"
 )
 async def delete_invoice(
-    invoice_id: UUID,
-    session: AsyncSession = Depends(get_session),
-    current_seller: Seller = Depends(get_current_user),
+        invoice_id: UUID,
+        session: AsyncSession = Depends(get_session),
+        current_seller: Seller = Depends(get_current_user),
 ):
     try:
         await invoice_service.delete_invoice(session, invoice_id, current_seller)

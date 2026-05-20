@@ -1,0 +1,21 @@
+services:
+  test_db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: b2b_test
+    ports:
+      - "5433:5432"
+
+  tests:
+    build:
+      context: .
+      dockerfile: b2b/Dockerfile.test
+    env_file:
+      - .env.test
+    depends_on:
+      - test_db
+    volumes:
+      - ./b2b/src:/app/src
+      - ./b2b/tests:/app/tests
