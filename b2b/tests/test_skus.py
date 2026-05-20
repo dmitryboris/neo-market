@@ -1,119 +1,126 @@
 import pytest
 from uuid import uuid4
-from datetime import datetime
-from unittest.mock import AsyncMock, patch
-from httpx import AsyncClient, ASGITransport
+from unittest.mock import patch
+from sqlalchemy import select
+from httpx import AsyncClient
+from src.models import SKU, Product, ProductStatus
+from tests.conftest import TEST_SELLER_ID, _create_category
 
-from src.main import app
-from src.database import get_session
-from src.dependencies import get_current_user
-from src.models.seller import Seller
-from src.models.product import ProductStatus
-from src.schemas.sku import SKUResponse
-from src.services.exceptions import ProductNotFound, ForbiddenOperation
 
-TEST_SELLER_ID = uuid4()
-TEST_SELLER = Seller(
-    id=TEST_SELLER_ID,
-    email="test@example.com",
-    first_name="Test",
-    last_name="Seller",
-    company_name="Test Company",
-    inn="1111111111",
-    password_hash="fake"
-)
+@pytest.mark.asyncio
+async def test_first_sku_transitions_product_to_on_moderation(client, db_session, product):
+    assert product.status == ProductStatus.CREATED
 
-async def override_get_session():
-    yield AsyncMock()
-
-async def override_get_current_user():
-    return TEST_SELLER
-
-app.dependency_overrides[get_session] = override_get_session
-app.dependency_overrides[get_current_user] = override_get_current_user
-
-@pytest.fixture
-async def client():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        yield ac
-
-@pytest.fixture
-def valid_sku_payload():
-    return {
-        "product_id": str(uuid4()),
-        "name": "Test SKU",
+    sku_payload = {
+        "product_id": str(product.id),
+        "name": "First SKU",
         "price": 10000,
         "cost_price": 5000,
-        "discount": 0,
-        "images": [{"url": "url", "ordering": 0}],
+        "images": [{"url": "http://ex.com/img.jpg", "ordering": 0}],
         "characteristics": [{"name": "Color", "value": "Black"}]
     }
+    response = await client.post("/api/v1/skus", json=sku_payload)
+    print(response.json())
+    assert response.status_code == 201
+    data = response.json()
+    assert data["name"] == "First SKU"
+
+    await db_session.refresh(product)
+    assert product.status == ProductStatus.ON_MODERATION
+
+    stmt = select(SKU).where(SKU.product_id == product.id)
+    result = await db_session.execute(stmt)
+    skus = result.scalars().all()
+    assert len(skus) == 1
+    assert skus[0].name == "First SKU"
+
 
 @pytest.mark.asyncio
-async def test_first_sku_transitions_product_to_on_moderation(client, valid_sku_payload):
-    with patch("src.services.sku_service.create_sku", new_callable=AsyncMock) as mock_create:
-        sku_id = uuid4()
-        expected = SKUResponse(
-            id=sku_id,
-            product_id=uuid4(),
-            name=valid_sku_payload["name"],
-            price=10000,
-            cost_price=5000,
-            discount=0,
-            active_quantity=0,
-            reserved_quantity=0,
-            stock_quantity=0,
-            article=None,
-            characteristics=[],
-            images=[],
-            created_at=datetime.now(),
-            updated_at=datetime.now()
-        )
-        mock_create.return_value = expected
-        response = await client.post("/api/v1/skus", json=valid_sku_payload)
+async def test_second_sku_no_state_change(client, db_session, product):
+    sku1_payload = {
+        "product_id": str(product.id),
+        "name": "First SKU",
+        "price": 10000,
+        "cost_price": 5000,
+        "images": [{"url": "http://ex.com/img.jpg", "ordering": 0}],
+    }
+    response1 = await client.post("/api/v1/skus", json=sku1_payload)
+    print(response1.json())
+    assert response1.status_code == 201
+    await db_session.refresh(product)
+    assert product.status == ProductStatus.ON_MODERATION
+
+    sku2_payload = {
+        "product_id": str(product.id),
+        "name": "Second SKU",
+        "price": 20000,
+        "cost_price": 10000,
+        "images": [{"url": "http://ex.com/img2.jpg", "ordering": 0}],
+    }
+    response2 = await client.post("/api/v1/skus", json=sku2_payload)
+    assert response2.status_code == 201
+
+    await db_session.refresh(product)
+    assert product.status == ProductStatus.ON_MODERATION
+
+    stmt = select(SKU).where(SKU.product_id == product.id)
+    result = await db_session.execute(stmt)
+    skus = result.scalars().all()
+    assert len(skus) == 2
+
+
+@pytest.mark.asyncio
+async def test_first_sku_emits_created_event_to_moderation(client, db_session, product):
+    with patch("src.services.sku_service._send_moderation_event") as mock_event:
+        sku_payload = {
+            "product_id": str(product.id),
+            "name": "Event SKU",
+            "price": 10000,
+            "cost_price": 5000,
+            "images": [{"url": "http://ex.com/img.jpg", "ordering": 0}],
+        }
+        response = await client.post("/api/v1/skus", json=sku_payload)
+        print(response.json())
         assert response.status_code == 201
-        data = response.json()
-        assert data["name"] == valid_sku_payload["name"]
-        called_seller_id = mock_create.call_args[0][1]
-        assert called_seller_id == TEST_SELLER_ID
+
+        mock_event.assert_called_once()
+        args, kwargs = mock_event.call_args
+        product_arg = args[0]
+        assert product_arg.id == product.id
+        assert product_arg.status == ProductStatus.ON_MODERATION
+
 
 @pytest.mark.asyncio
-async def test_second_sku_no_state_change(client, valid_sku_payload):
-    with patch("src.services.sku_service.create_sku", new_callable=AsyncMock) as mock_create:
-        sku_id = uuid4()
-        expected = SKUResponse(
-            id=sku_id,
-            product_id=uuid4(),
-            name=valid_sku_payload["name"],
-            price=10000,
-            cost_price=5000,
-            discount=0,
-            stock_quantity=0,
-            active_quantity=0,
-            reserved_quantity=0,
-            article=None,
-            characteristics=[],
-            images=[],
-            created_at=datetime.now(),
-            updated_at=datetime.now()
-        )
-        mock_create.return_value = expected
-        response = await client.post("/api/v1/skus", json=valid_sku_payload)
-        assert response.status_code == 201
+async def test_add_sku_to_hard_blocked_returns_403(client, db_session, product):
+    product.status = ProductStatus.HARD_BLOCKED
+    await db_session.commit()
+
+    sku_payload = {
+        "product_id": str(product.id),
+        "name": "Blocked SKU",
+        "price": 10000,
+        "cost_price": 5000,
+        "images": [{"url": "http://ex.com/img.jpg", "ordering": 0}],
+    }
+    response = await client.post("/api/v1/skus", json=sku_payload)
+    print(response.json())
+    assert response.status_code == 403
+    assert "hard-blocked" in response.text.lower()
+
+    stmt = select(SKU).where(SKU.product_id == product.id)
+    result = await db_session.execute(stmt)
+    skus = result.scalars().all()
+    assert len(skus) == 0
+
 
 @pytest.mark.asyncio
-async def test_add_sku_to_hard_blocked_returns_403(client, valid_sku_payload):
-    with patch("src.services.sku_service.create_sku", new_callable=AsyncMock) as mock_create:
-        mock_create.side_effect = ForbiddenOperation("Cannot add SKU to hard-blocked product")
-        response = await client.post("/api/v1/skus", json=valid_sku_payload)
-        assert response.status_code == 403
-        assert "hard-blocked" in response.text.lower()
-
-@pytest.mark.asyncio
-async def test_missing_image_returns_400(client, valid_sku_payload):
-    payload = valid_sku_payload.copy()
-    payload["images"] = []
-    response = await client.post("/api/v1/skus", json=payload)
+async def test_missing_image_returns_400(client, db_session, product):
+    sku_payload = {
+        "product_id": str(product.id),
+        "name": "No Image SKU",
+        "price": 10000,
+        "cost_price": 5000,
+    }
+    response = await client.post("/api/v1/skus", json=sku_payload)
     assert response.status_code == 400
     assert "image" in response.text.lower()
