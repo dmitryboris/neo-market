@@ -38,9 +38,8 @@ jobs:
           pip install -r b2b/requirements-test.txt
 
       - name: Prepare environment
-        working-directory: b2b
         run: |
-          cp env.example .env
+          cp env.example b2b/.env
           sed -i 's/DB_HOST=.*/DB_HOST=localhost/' .env
 
       - name: Run tests
