@@ -39,7 +39,7 @@ jobs:
 
       - name: Prepare environment
         run: |
-          cp env.example b2b/.env
+          cp .env.example b2b/.env
           sed -i 's/DB_HOST=.*/DB_HOST=localhost/' .env
 
       - name: Run tests
