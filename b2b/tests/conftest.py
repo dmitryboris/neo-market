@@ -87,3 +87,42 @@ async def _create_category(session, category_id):
     cat = Category(id=category_id, name="Test Category")
     session.add(cat)
     await session.flush()
+
+
+@pytest.fixture
+async def seller(db_session):
+    """Создаёт тестового продавца для тестов SKU (отдельный от TEST_SELLER)."""
+    seller_id = uuid4()
+    seller = Seller(
+        id=seller_id,
+        email=f"seller_{uuid4()}@test.com",
+        first_name="SKU",
+        last_name="Tester",
+        company_name="SKU Test Co",
+        inn=str(uuid4().int)[:12],
+        password_hash="fake",
+        role="seller"
+    )
+    db_session.add(seller)
+    await db_session.commit()
+    return seller
+
+
+@pytest.fixture
+async def product(db_session, seller):
+    """Создаёт товар со статусом CREATED для тестов SKU."""
+    category_id = uuid4()
+    cat = Category(id=category_id, name="Test Category")
+    db_session.add(cat)
+    prod = Product(
+        id=uuid4(),
+        seller_id=seller.id,
+        category_id=category_id,
+        title="Test Product",
+        description="Test description",
+        status=ProductStatus.CREATED
+    )
+    db_session.add(prod)
+    await db_session.commit()
+    await db_session.refresh(prod)
+    return prod

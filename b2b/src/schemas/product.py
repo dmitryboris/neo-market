@@ -1,8 +1,9 @@
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, Field, ConfigDict
 from uuid import UUID
 from datetime import datetime
 from typing import List, Optional
 from src.models.product import ProductStatus
+from src.schemas.sku import SKUResponse
 
 class ProductImageResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -22,13 +23,6 @@ class ProductCharacteristicResponse(BaseModel):
 class ProductCharacteristicCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     value: str = Field(..., min_length=1, max_length=500)
-
-class SKUShortResponse(BaseModel):
-    id: UUID
-    name: str | None = None
-    price: int
-    stock_quantity: int
-    article: str | None = None
 
 class ProductCreateRequest(BaseModel):
     category_id: Optional[str] = None
@@ -53,7 +47,7 @@ class ProductResponse(BaseModel):
     status: ProductStatus
     images: List[ProductImageResponse]
     characteristics: List[ProductCharacteristicResponse]
-    skus: List[SKUShortResponse]
+    skus: List[SKUResponse]
     created_at: datetime
     updated_at: datetime
 

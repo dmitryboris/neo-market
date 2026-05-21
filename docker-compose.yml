@@ -24,6 +24,8 @@ services:
       DB_HOST: b2b_db
       JWT_SECRET: ${JWT_SECRET}
       JWT_ALGORITHM: ${JWT_ALGORITHM}
+      MODERATION_URL: ${MODERATION_URL}
+      B2B_TO_MOD_KEY: ${B2B_TO_MOD_KEY}
     depends_on:
       - b2b_db
     ports:

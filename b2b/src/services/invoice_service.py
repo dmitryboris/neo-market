@@ -13,7 +13,7 @@ from src.services import exceptions as exc
 async def get_invoice_by_id(session: AsyncSession, invoice_id, seller_id=None) -> Invoice:
     result = await session.execute(
         select(Invoice)
-        .options(selectinload(Invoice.items))
+        .options(selectinload(Invoice.items).selectinload(InvoiceItem.sku))
         .where(Invoice.id == invoice_id)
     )
     invoice = result.scalar_one_or_none()
@@ -52,7 +52,7 @@ async def create_invoice(session: AsyncSession, seller: Seller, request: Invoice
 
     result = await session.execute(
         select(SKU)
-        .join(Product, SKU.product_id == Product.id)
+        .options(selectinload(SKU.product))
         .where(SKU.id.in_(sku_ids))
     )
     skus = result.scalars().all()
@@ -96,7 +96,7 @@ async def accept_invoice(session: AsyncSession, invoice_id, seller: Seller) -> I
         sku = skus_dict.get(item.sku_id)
         if not sku:
             raise exc.SKUNotFound(f"SKU {item.sku_id} not found")
-        sku.stock_quantity += item.quantity
+        sku.active_quantity += item.quantity
 
     invoice.status = InvoiceStatus.ACCEPTED
     await session.commit()

@@ -9,9 +9,10 @@ from src.schemas.product import (
     ProductPaginatedResponse, ProductImageUpdateRequest, ProductImageCreateRequest,
     ProductImageResponse, ProductStatus
 )
-from src.services import product_service
+from src.services import product_service, sku_service
 from src.services.exceptions import CategoryNotFound, ProductNotFound, AccessDenied
 from src.services.image_service import add_product_image, update_product_image, delete_product_image
+from src.schemas.sku import SKUResponse
 
 product_router = APIRouter(prefix="/products", tags=["Products"])
 
@@ -145,3 +146,13 @@ async def delete_product_image_endpoint(
         await delete_product_image(session, image_id, current_seller.id)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    
+    
+@product_router.get("/{product_id}/skus", response_model=list[SKUResponse])
+async def get_product_skus(
+    product_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current_seller: Seller = Depends(get_current_user),
+):
+    skus = await sku_service.get_skus_by_product(session, product_id, current_seller.id)
+    return skus

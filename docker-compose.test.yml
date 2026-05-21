@@ -13,7 +13,7 @@ services:
       context: .
       dockerfile: b2b/Dockerfile.test
     env_file:
-      - .env.test
+      - .env.example
     depends_on:
       - test_db
     volumes:
