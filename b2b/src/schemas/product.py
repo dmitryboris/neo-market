@@ -3,6 +3,7 @@ from uuid import UUID
 from datetime import datetime
 from src.models.product import ProductStatus
 from src.schemas.sku import SKUResponse, SKUPublicResponse
+from src.schemas.characteristic import Characteristic, CharacteristicResponse
 
 
 class ProductImageResponse(BaseModel):
@@ -16,15 +17,6 @@ class ProductImageResponse(BaseModel):
 class ProductImageCreate(BaseModel):
     url: str
     ordering: int = 0
-
-
-class Characteristic(BaseModel):
-    name: str
-    value: str
-
-
-class CharacteristicResponse(Characteristic):
-    id: UUID
 
 
 class ProductCreate(BaseModel):
