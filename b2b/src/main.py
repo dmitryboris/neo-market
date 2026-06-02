@@ -6,6 +6,7 @@ import uvicorn
 
 from src.routes import routers
 
+
 def run_migrations():
     alembic_cfg = Config("alembic.ini")
     command.upgrade(alembic_cfg, "head")
@@ -13,7 +14,7 @@ def run_migrations():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    #run_migrations()
+    run_migrations()
     yield
 
 

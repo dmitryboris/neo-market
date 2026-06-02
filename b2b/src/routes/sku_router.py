@@ -4,11 +4,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_session
 from src.dependencies import get_current_user
 from src.models import Seller
-from src.schemas.sku import SKUCreateRequest, SKUResponse, SKUUpdateRequest
+from src.schemas.sku import SKUCreate, SKUResponse, SKUUpdate, SKUImageResponse
 from src.services import sku_service
 from src.services.exceptions import ProductNotFound, ForbiddenOperation
 from src.services.image_service import add_sku_image, update_sku_image, delete_sku_image
-from src.schemas.image import SKUImageResponse, SKUImageCreateRequest, SKUImageUpdateRequest
+from src.schemas.image import ImageAttachRequest, ImageUpdateRequest
 
 sku_router = APIRouter(prefix="/skus", tags=["SKU"])
 
@@ -20,7 +20,7 @@ def invalid_request(message: str) -> HTTPException:
 
 @sku_router.post("", response_model=SKUResponse, status_code=status.HTTP_201_CREATED)
 async def create_sku_endpoint(
-    request: SKUCreateRequest,
+    request: SKUCreate,
     session: AsyncSession = Depends(get_session),
     current_seller: Seller = Depends(get_current_user),
 ):
@@ -56,7 +56,7 @@ async def get_sku(
 @sku_router.patch("/{sku_id}", response_model=SKUResponse)
 async def update_sku(
     sku_id: UUID,
-    request: SKUUpdateRequest,
+    request: SKUUpdate,
     session: AsyncSession = Depends(get_session),
     current_seller: Seller = Depends(get_current_user),
 ):
@@ -80,7 +80,7 @@ async def delete_sku(
 @sku_router.post("/{sku_id}/images", response_model=SKUImageResponse, status_code=status.HTTP_201_CREATED)
 async def add_sku_image_endpoint(
     sku_id: UUID,
-    request: SKUImageCreateRequest,
+    request: ImageAttachRequest,
     session: AsyncSession = Depends(get_session),
     current_seller: Seller = Depends(get_current_user),
 ):
@@ -93,7 +93,7 @@ async def add_sku_image_endpoint(
 @sku_router.patch("/images/{image_id}", response_model=SKUImageResponse)
 async def update_sku_image_endpoint(
     image_id: UUID,
-    request: SKUImageUpdateRequest,
+    request: ImageUpdateRequest,
     session: AsyncSession = Depends(get_session),
     current_seller: Seller = Depends(get_current_user),
 ):

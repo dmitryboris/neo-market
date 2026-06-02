@@ -3,7 +3,7 @@ from sqlalchemy import select, func
 from uuid import UUID
 from typing import Optional, List
 from src.models import Product, Category, ProductImage, ProductCharacteristic, SKU
-from src.schemas.product import ProductCreateRequest, ProductUpdateRequest, ProductShortResponse, ProductPaginatedResponse, ProductStatus
+from src.schemas.product import ProductCreate, ProductUpdate, ProductShortResponse, ProductPaginatedResponse, ProductStatus
 from src.services.exceptions import CategoryNotFound, ProductNotFound, AccessDenied
 from sqlalchemy.orm import selectinload
 
@@ -57,7 +57,7 @@ async def get_my_products(
 async def create_product(
     session: AsyncSession,
     seller_id: UUID,
-    request: ProductCreateRequest,
+    request: ProductCreate,
     category_uuid: UUID
 ) -> Product:
     cat_result = await session.execute(select(Category).where(Category.id == category_uuid))
@@ -98,7 +98,7 @@ async def create_product(
 async def update_product(
     session: AsyncSession,
     product: Product,
-    request: ProductUpdateRequest
+    request: ProductUpdate
 ) -> Product:
     """Обновить поля товара (category, title, description, status)."""
     if request.category_id is not None:

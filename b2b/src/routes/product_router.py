@@ -9,7 +9,7 @@ from src.schemas.product import (
     ProductPaginatedResponse, ProductImageCreate,
     ProductImageResponse, ProductStatus
 )
-# from src.schemas.image import ImageUpdateRequest
+from src.schemas.image import ImageUpdateRequest
 from src.services import product_service, sku_service
 from src.services.exceptions import CategoryNotFound, ProductNotFound, AccessDenied
 from src.services.image_service import add_product_image, update_product_image, delete_product_image

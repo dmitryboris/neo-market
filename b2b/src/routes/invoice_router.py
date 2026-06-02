@@ -4,14 +4,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_session
 from src.dependencies import get_current_user
 from src.models.seller import Seller
-from src.schemas.invoice import InvoiceCreate, InvoiceResponse, InvoiceListResponse
+from src.schemas.invoice import InvoiceCreate, InvoiceResponse, InvoicePaginatedResponse
 from src.services import invoice_service
 from src.services import exceptions as exc
 
 invoice_router = APIRouter(prefix="/invoices", tags=["Invoices"])
 
 
-@invoice_router.get("", response_model=InvoiceListResponse, summary="List invoices")
+@invoice_router.get("", response_model=InvoicePaginatedResponse, summary="List invoices")
 async def get_invoices(
         limit: int = 20,
         offset: int = 0,
