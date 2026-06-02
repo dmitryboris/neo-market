@@ -63,7 +63,7 @@ class Product(Base, TimestampMixin):
     skus: Mapped[list["SKU"]] = relationship(
         back_populates="product", cascade="all, delete-orphan"
     )
-    blocking_reasons: Mapped["BlockingReason | None"] = relationship(
+    blocking_reason: Mapped["BlockingReason | None"] = relationship(
         back_populates="product", uselist=False, cascade="all, delete-orphan"
     )
     field_reports: Mapped[list["FieldReport"]] = relationship(
