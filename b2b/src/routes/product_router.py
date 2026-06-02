@@ -17,8 +17,11 @@ from src.schemas.sku import SKUResponse
 
 product_router = APIRouter(prefix="/products", tags=["Products"])
 
+
 def invalid_request(message: str) -> HTTPException:
-    return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"code": "INVALID_REQUEST", "message": message})
+    return HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                         detail={"code": "INVALID_REQUEST", "message": message})
+
 
 def is_valid_uuid(val: str) -> bool:
     try:
@@ -27,11 +30,12 @@ def is_valid_uuid(val: str) -> bool:
     except (ValueError, AttributeError, TypeError):
         return False
 
+
 @product_router.post("", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
 async def create_product_endpoint(
-    request: ProductCreate,
-    session: AsyncSession = Depends(get_session),
-    current_seller: Seller = Depends(get_current_user)
+        request: ProductCreate,
+        session: AsyncSession = Depends(get_session),
+        current_seller: Seller = Depends(get_current_user)
 ):
     if not request.title or not request.title.strip():
         raise invalid_request("title is required")
@@ -40,10 +44,10 @@ async def create_product_endpoint(
 
     if not request.images:
         raise invalid_request("At least one image is required")
-    
+
     if request.category_id is None:
         raise invalid_request("category_id is required")
-    
+
     if not is_valid_uuid(request.category_id):
         raise invalid_request("category_id must be a valid UUID")
 
@@ -57,23 +61,25 @@ async def create_product_endpoint(
     except Exception:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
+
 @product_router.get("", response_model=ProductPaginatedResponse)
 async def get_my_products(
-    limit: int = 20,
-    offset: int = 0,
-    status: ProductStatus | None = None,
-    include_deleted: bool = False,
-    session: AsyncSession = Depends(get_session),
-    current_seller: Seller = Depends(get_current_user)
+        limit: int = 20,
+        offset: int = 0,
+        status: ProductStatus | None = None,
+        include_deleted: bool = False,
+        session: AsyncSession = Depends(get_session),
+        current_seller: Seller = Depends(get_current_user)
 ):
     data = await product_service.get_my_products(session, current_seller.id, limit, offset, status, include_deleted)
     return data
 
+
 @product_router.get("/{product_id}", response_model=ProductResponse)
 async def get_product(
-    product_id: UUID,
-    session: AsyncSession = Depends(get_session),
-    current_seller: Seller = Depends(get_current_user)
+        product_id: UUID,
+        session: AsyncSession = Depends(get_session),
+        current_seller: Seller = Depends(get_current_user)
 ):
     try:
         product = await product_service.get_product_by_id(session, product_id, seller_id=current_seller.id)
@@ -81,12 +87,13 @@ async def get_product(
     except (ProductNotFound, AccessDenied) as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
+
 @product_router.patch("/{product_id}", response_model=ProductResponse)
 async def update_product(
-    product_id: UUID,
-    request: ProductUpdate,
-    session: AsyncSession = Depends(get_session),
-    current_seller: Seller = Depends(get_current_user)
+        product_id: UUID,
+        request: ProductUpdate,
+        session: AsyncSession = Depends(get_session),
+        current_seller: Seller = Depends(get_current_user)
 ):
     try:
         product = await product_service.get_product_by_id(session, product_id, seller_id=current_seller.id)
@@ -97,11 +104,12 @@ async def update_product(
     except CategoryNotFound as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+
 @product_router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_product(
-    product_id: UUID,
-    session: AsyncSession = Depends(get_session),
-    current_seller: Seller = Depends(get_current_user)
+        product_id: UUID,
+        session: AsyncSession = Depends(get_session),
+        current_seller: Seller = Depends(get_current_user)
 ):
     try:
         product = await product_service.get_product_by_id(session, product_id, seller_id=current_seller.id)
@@ -109,12 +117,13 @@ async def delete_product(
     except (ProductNotFound, AccessDenied) as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
+
 @product_router.post("/{product_id}/images", response_model=ProductImageResponse, status_code=status.HTTP_201_CREATED)
 async def add_product_image_endpoint(
-    product_id: UUID,
-    request: ProductImageCreate, # ImageAttachRequest
-    session: AsyncSession = Depends(get_session),
-    current_seller: Seller = Depends(get_current_user)
+        product_id: UUID,
+        request: ProductImageCreate,  # ImageAttachRequest
+        session: AsyncSession = Depends(get_session),
+        current_seller: Seller = Depends(get_current_user)
 ):
     try:
         image = await add_product_image(session, product_id, current_seller.id, request.url, request.ordering)
@@ -122,38 +131,41 @@ async def add_product_image_endpoint(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+
 @product_router.patch("/images/{image_id}", response_model=ProductImageResponse)
 async def update_product_image_endpoint(
-    image_id: UUID,
-    request: ImageUpdateRequest,
-    session: AsyncSession = Depends(get_session),
-    current_seller: Seller = Depends(get_current_user)
+        image_id: UUID,
+        request: ImageUpdateRequest,
+        session: AsyncSession = Depends(get_session),
+        current_seller: Seller = Depends(get_current_user)
 ):
     try:
         if request.url is None and request.ordering is None:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="At least one field (url or ordering) must be provided")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="At least one field (url or ordering) must be provided")
         image = await update_product_image(session, image_id, current_seller.id, request.url, request.ordering)
         return image
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+
 @product_router.delete("/images/{image_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_product_image_endpoint(
-    image_id: UUID,
-    session: AsyncSession = Depends(get_session),
-    current_seller: Seller = Depends(get_current_user)
+        image_id: UUID,
+        session: AsyncSession = Depends(get_session),
+        current_seller: Seller = Depends(get_current_user)
 ):
     try:
         await delete_product_image(session, image_id, current_seller.id)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    
-    
+
+
 @product_router.get("/{product_id}/skus", response_model=list[SKUResponse])
 async def get_product_skus(
-    product_id: UUID,
-    session: AsyncSession = Depends(get_session),
-    current_seller: Seller = Depends(get_current_user),
+        product_id: UUID,
+        session: AsyncSession = Depends(get_session),
+        current_seller: Seller = Depends(get_current_user),
 ):
     skus = await sku_service.get_skus_by_product(session, product_id, current_seller.id)
     return skus
