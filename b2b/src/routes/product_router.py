@@ -5,10 +5,11 @@ from src.database import get_session
 from src.dependencies import get_current_user
 from src.models import Seller
 from src.schemas.product import (
-    ProductCreateRequest, ProductResponse, ProductUpdateRequest,
-    ProductPaginatedResponse, ProductImageUpdateRequest, ProductImageCreateRequest,
+    ProductCreate, ProductResponse, ProductUpdate,
+    ProductPaginatedResponse, ProductImageCreate,
     ProductImageResponse, ProductStatus
 )
+# from src.schemas.image import ImageUpdateRequest
 from src.services import product_service, sku_service
 from src.services.exceptions import CategoryNotFound, ProductNotFound, AccessDenied
 from src.services.image_service import add_product_image, update_product_image, delete_product_image
@@ -28,7 +29,7 @@ def is_valid_uuid(val: str) -> bool:
 
 @product_router.post("", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
 async def create_product_endpoint(
-    request: ProductCreateRequest,
+    request: ProductCreate,
     session: AsyncSession = Depends(get_session),
     current_seller: Seller = Depends(get_current_user)
 ):
@@ -83,7 +84,7 @@ async def get_product(
 @product_router.patch("/{product_id}", response_model=ProductResponse)
 async def update_product(
     product_id: UUID,
-    request: ProductUpdateRequest,
+    request: ProductUpdate,
     session: AsyncSession = Depends(get_session),
     current_seller: Seller = Depends(get_current_user)
 ):
@@ -111,7 +112,7 @@ async def delete_product(
 @product_router.post("/{product_id}/images", response_model=ProductImageResponse, status_code=status.HTTP_201_CREATED)
 async def add_product_image_endpoint(
     product_id: UUID,
-    request: ProductImageCreateRequest,
+    request: ProductImageCreate, # ImageAttachRequest
     session: AsyncSession = Depends(get_session),
     current_seller: Seller = Depends(get_current_user)
 ):
@@ -124,7 +125,7 @@ async def add_product_image_endpoint(
 @product_router.patch("/images/{image_id}", response_model=ProductImageResponse)
 async def update_product_image_endpoint(
     image_id: UUID,
-    request: ProductImageUpdateRequest,
+    request: ImageUpdateRequest,
     session: AsyncSession = Depends(get_session),
     current_seller: Seller = Depends(get_current_user)
 ):
