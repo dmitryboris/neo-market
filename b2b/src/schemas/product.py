@@ -1,51 +1,51 @@
 from pydantic import BaseModel, Field, ConfigDict
 from uuid import UUID
 from datetime import datetime
-from typing import List, Optional
 from src.models.product import ProductStatus
-from src.schemas.sku import SKUResponse
+from src.schemas.sku import SKUResponse, SKUPublicResponse
 
 
 class ProductImageResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     url: str
     ordering: int
 
 
 class ProductImageCreate(BaseModel):
-    url: str = Field(..., description="Ссылка на изображение")
-    ordering: int = Field(..., ge=0, description="Порядок отображения")
+    url: str
+    ordering: int = 0
 
 
-class ProductCharacteristicResponse(BaseModel):
-    id: UUID
+class Characteristic(BaseModel):
     name: str
     value: str
 
 
-class ProductCharacteristicCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
-    value: str = Field(..., min_length=1, max_length=500)
+class CharacteristicResponse(Characteristic):
+    id: UUID
 
 
-class ProductCreateRequest(BaseModel):
-    category_id: Optional[str] = None
-    title: Optional[str] = None
+class ProductCreate(BaseModel):
+    category_id: UUID
+    title: str = Field(..., min_length=1, max_length=255)
     description: str = Field(..., min_length=1, max_length=5000)
-    images: List[ProductImageCreate] | None = None
-    characteristics: Optional[List[ProductCharacteristicCreate]] = Field(default_factory=list)
+    slug: str | None = None
+    images: list[ProductImageCreate] = Field(default_factory=list)
+    characteristics: list[Characteristic] = Field(default_factory=list)
 
 
-class ProductUpdateRequest(BaseModel):
-    category_id: Optional[UUID] = None
-    title: Optional[str] = Field(None, min_length=1, max_length=255)
-    description: Optional[str] = Field(None, min_length=1, max_length=5000)
-    status: Optional[str] = None
+class ProductUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=5000)
+    category_id: UUID | None = None
+    characteristics: list[Characteristic] | None = None
 
 
 class ProductResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     seller_id: UUID
     category_id: UUID
@@ -56,27 +56,36 @@ class ProductResponse(BaseModel):
     deleted: bool
     blocking_reason_id: UUID | None
     moderator_comment: str | None
-    images: List[ProductImageResponse]
-    characteristics: List[ProductCharacteristicResponse]
-    skus: List[SKUResponse]
+    images: list[ProductImageResponse]
+    characteristics: list[CharacteristicResponse]
+    skus: list[SKUResponse]
     created_at: datetime
     updated_at: datetime
 
 
-class ProductImageUpdateRequest(BaseModel):
-    url: Optional[str] = None
-    ordering: Optional[int] = Field(None, ge=0)
+class ProductPublicResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
 
-
-class ProductImageCreateRequest(BaseModel):
-    url: str
-    ordering: int = 0
+    id: UUID
+    seller_id: UUID
+    category_id: UUID
+    title: str
+    slug: str
+    description: str
+    status: ProductStatus
+    images: list[ProductImageResponse]
+    characteristics: list[CharacteristicResponse]
+    skus: list[SKUPublicResponse]
+    created_at: datetime
+    updated_at: datetime
 
 
 class ProductShortResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     title: str
+    slug: str
     status: ProductStatus
     category_id: UUID
     deleted: bool
@@ -85,8 +94,28 @@ class ProductShortResponse(BaseModel):
     cover_image: str | None = None
 
 
+class ProductPublicShortResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    title: str
+    slug: str
+    status: ProductStatus
+    category_id: UUID
+    min_price: int
+    cover_image: str | None = None
+    created_at: datetime
+
+
 class ProductPaginatedResponse(BaseModel):
     total_count: int
     items: list[ProductShortResponse]
+    limit: int
+    offset: int
+
+
+class ProductPublicPaginatedResponse(BaseModel):
+    items: list[ProductPublicShortResponse]
+    total_count: int
     limit: int
     offset: int
