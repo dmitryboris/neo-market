@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 from uuid import UUID
 from datetime import datetime
 from src.models.invoice import InvoiceStatus
@@ -6,14 +6,7 @@ from src.models.invoice import InvoiceStatus
 
 class InvoiceItemCreate(BaseModel):
     sku_id: UUID
-    quantity: int
-
-    @field_validator("quantity")
-    @classmethod
-    def ensure_quantity_positive(cls, v: int) -> int:
-        if v <= 0:
-            raise ValueError("Quantity must be greater than zero")
-        return v
+    quantity: int = Field(..., ge=1)
 
 
 class InvoiceItemResponse(BaseModel):
@@ -22,25 +15,20 @@ class InvoiceItemResponse(BaseModel):
     id: UUID
     sku_id: UUID
     quantity: int
+    accepted_quantity: int
 
 
 class InvoiceCreate(BaseModel):
-    items: list[InvoiceItemCreate]
+    items: list[InvoiceItemCreate] = Field(..., min_length=1)
 
-    @field_validator("items")
-    @classmethod
-    def ensure_items_not_empty(cls, v: list) -> list:
-        if not v:
-            raise ValueError("Invoice must contain at least one item")
-        return v
-    
-    @field_validator("items")
-    @classmethod
-    def ensure_no_duplicate_skus(cls, v: list) -> list:
-        sku_ids = [item.sku_id for item in v]
-        if len(sku_ids) != len(set(sku_ids)):
-            raise ValueError("Duplicate SKU IDs in invoice items")
-        return v
+
+class InvoiceAcceptItem(BaseModel):
+    invoice_item_id: UUID
+    accepted_quantity: int = Field(..., ge=0)
+
+
+class InvoiceAcceptRequest(BaseModel):
+    accepted_items: list[InvoiceAcceptItem] | None = None
 
 
 class InvoiceResponse(BaseModel):
@@ -52,8 +40,12 @@ class InvoiceResponse(BaseModel):
     items: list[InvoiceItemResponse]
     created_at: datetime
     updated_at: datetime
+    accepted_at: datetime | None = None
+    accepted_by: UUID | None = None
 
 
-class InvoiceListResponse(BaseModel):
-    total: int
+class InvoicePaginatedResponse(BaseModel):
     items: list[InvoiceResponse]
+    total_count: int
+    limit: int
+    offset: int

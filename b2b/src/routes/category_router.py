@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_session
 from src.dependencies import get_current_user
-from src.schemas.category import CategoryCreate, CategoryUpdate, CategoryResponse, CategoryWithChildrenResponse
+from src.schemas.category import CategoryCreate, CategoryUpdate, CategoryResponse, CategoryWithChildrenResponse, CategoryTreeResponse
 from src.services import category_service
 from src.services import exceptions as exc
 
@@ -31,7 +31,7 @@ async def get_category(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Category not found",
         )
-    return category
+    return category_service.serialize_category_with_children(category)
 
 
 @category_router.post(
@@ -92,3 +92,24 @@ async def delete_category(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
     except exc.CategoryHasChildren as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+
+@category_router.get(
+    "/tree",
+    response_model=list[CategoryTreeResponse],
+    summary="Get category tree"
+)
+async def get_categories_tree(session: AsyncSession = Depends(get_session)):
+    return await category_service.get_categories_tree(session)
+
+
+@category_router.get(
+    "/{category_id}/breadcrumbs",
+    response_model=list[CategoryResponse],
+    summary="Get category breadcrumbs"
+)
+async def get_category_breadcrumbs(
+    category_id: UUID,
+    session: AsyncSession = Depends(get_session)
+):
+    return await category_service.get_breadcrumbs(session, category_id)

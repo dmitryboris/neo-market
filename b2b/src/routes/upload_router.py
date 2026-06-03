@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File, status, HTTPException
+"""from fastapi import APIRouter, Depends, UploadFile, File, status, HTTPException
 from src.dependencies import get_current_user
 from src.services import file_service
 from src.services.exceptions import InvalidFileType, FileTooLarge
@@ -22,4 +22,4 @@ async def upload_image_endpoint(
     except InvalidFileType as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except FileTooLarge as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))"""

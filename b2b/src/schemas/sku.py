@@ -1,51 +1,71 @@
 from pydantic import BaseModel, ConfigDict, Field
 from uuid import UUID
 from datetime import datetime
-from typing import List, Optional
-from src.schemas.image import SKUImageCreateRequest
+from src.schemas.characteristic import Characteristic, CharacteristicResponse
 
-class SKUCharacteristicCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
-    value: str = Field(..., min_length=1, max_length=500)
 
-class SKUCharacteristicResponse(BaseModel):
-    id: UUID
-    name: str
-    value: str
+class SKUImageCreate(BaseModel):
+    url: str
+    ordering: int = 0
+
 
 class SKUImageResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     url: str
     ordering: int
 
-class SKUCreateRequest(BaseModel):
+
+class SKUCreate(BaseModel):
     product_id: UUID
-    name: str | None = None
-    price: int | None = None
+    name: str = Field(..., min_length=1, max_length=255)
+    price: int = Field(..., ge=0)
     cost_price: int | None = None
-    discount: int = 0
-    article: str | None = Field(None, max_length=100)
-    images: list[SKUImageCreateRequest] = Field(default_factory=list)
-    characteristics: Optional[List[SKUCharacteristicCreate]] = Field(default_factory=list)
+    discount: int = Field(default=0, ge=0)
+    article: str | None = None
+    images: list[SKUImageCreate] = Field(default_factory=list)
+    characteristics: list[Characteristic] = Field(default_factory=list)
+
 
 class SKUResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     product_id: UUID
     name: str
     price: int
-    cost_price: int
     discount: int
+    cost_price: int | None
     stock_quantity: int
     active_quantity: int
     reserved_quantity: int
-    article: str | None = None
-    characteristics: List[SKUCharacteristicResponse] = []
-    images: List[SKUImageResponse] = []
+    article: str | None
+    images: list[SKUImageResponse]
+    characteristics: list[CharacteristicResponse]
     created_at: datetime
     updated_at: datetime
 
-class SKUUpdateRequest(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=255)
-    price: Optional[int] = Field(None, gt=0)
-    discount: Optional[int] = Field(None, ge=0)
+
+class SKUPublicResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    product_id: UUID
+    name: str
+    price: int
+    discount: int
+    stock_quantity: int
+    active_quantity: int
+    article: str | None
+    images: list[SKUImageResponse]
+    characteristics: list[CharacteristicResponse]
+
+
+class SKUUpdate(BaseModel):
+    name: str | None = None
+    price: int | None = Field(default=None, ge=0)
+    discount: int | None = Field(default=None, ge=0)
+    cost_price: int | None = None
+    article: str | None = None
+    characteristics: list[Characteristic] | None = None

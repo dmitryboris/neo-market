@@ -11,6 +11,7 @@ class CategoryCreate(BaseModel):
 class CategoryUpdate(BaseModel):
     name: str | None = None
     parent_id: UUID | None = None
+    is_active: bool | None = None
 
 
 class CategoryResponse(BaseModel):
@@ -19,8 +20,17 @@ class CategoryResponse(BaseModel):
     id: UUID
     name: str
     parent_id: UUID | None
+    level: int
+    path: str
+    is_active: bool
     created_at: datetime
 
 
 class CategoryWithChildrenResponse(CategoryResponse):
     children: list["CategoryResponse"] = []
+
+
+class CategoryTreeResponse(BaseModel):
+    id: UUID
+    name: str
+    children: list["CategoryTreeResponse"] = []

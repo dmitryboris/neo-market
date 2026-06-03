@@ -14,7 +14,9 @@ if TYPE_CHECKING:
 
 class InvoiceStatus(str, enum.Enum):
     CREATED = "CREATED"
+    PARTIALLY_ACCEPTED = "PARTIALLY_ACCEPTED"
     ACCEPTED = "ACCEPTED"
+    CANCELLED = "CANCELLED"
 
 
 class Invoice(Base, TimestampMixin):

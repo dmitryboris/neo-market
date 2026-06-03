@@ -29,10 +29,11 @@ class SKU(Base, TimestampMixin):
     stock_quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     active_quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     reserved_quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    product: Mapped["Product"] = relationship(back_populates="skus")
     cost_price: Mapped[int] = mapped_column(BigInteger, nullable=False)
     discount: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     article: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    product: Mapped["Product"] = relationship(back_populates="skus")
     images: Mapped[list["SKUImage"]] = relationship(
         back_populates="sku", cascade="all, delete-orphan"
     )

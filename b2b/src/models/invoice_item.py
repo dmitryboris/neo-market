@@ -28,6 +28,7 @@ class InvoiceItem(Base):
         nullable=False
     )
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    accepted_quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     invoice: Mapped["Invoice"] = relationship(back_populates="items")
     sku: Mapped["SKU"] = relationship(back_populates="invoice_items")

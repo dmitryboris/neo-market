@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from src.models import SKU, Product, ProductStatus, SKUImage, SKUCharacteristic
-from src.schemas.sku import SKUCreateRequest, SKUUpdateRequest
+from src.schemas.sku import SKUCreate, SKUUpdate
 from src.services.exceptions import ProductNotFound, AccessDenied, ForbiddenOperation
 from src.config import settings
 import httpx
@@ -39,7 +39,7 @@ async def _send_moderation_event(product: Product) -> None:
 async def create_sku(
     session: AsyncSession,
     seller_id: uuid.UUID,
-    request: SKUCreateRequest
+    request: SKUCreate
 ) -> SKU:
     product = await get_product_with_access(session, request.product_id, seller_id)
 
@@ -105,7 +105,7 @@ async def get_skus_by_product(session: AsyncSession, product_id: uuid.UUID, sell
     )
     return result.scalars().all()
 
-async def update_sku(session: AsyncSession, sku: SKU, request: SKUUpdateRequest) -> SKU:
+async def update_sku(session: AsyncSession, sku: SKU, request: SKUUpdate) -> SKU:
     for field, value in request.model_dump(exclude_unset=True).items():
         setattr(sku, field, value)
     await session.commit()
