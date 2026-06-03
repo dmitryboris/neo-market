@@ -9,33 +9,14 @@ from tests.conftest import TEST_SELLER_ID
 
 
 @pytest.fixture
-async def seller(db_session):
-    """Создаёт тестового продавца для тестов SKU (отдельный от TEST_SELLER)."""
-    seller_id = uuid4()
-    seller = Seller(
-        id=seller_id,
-        email=f"seller_{uuid4()}@test.com",
-        first_name="SKU",
-        last_name="Tester",
-        company_name="SKU Test Co",
-        inn=str(uuid4().int)[:12],
-        password_hash="fake",
-        role="seller"
-    )
-    db_session.add(seller)
-    await db_session.commit()
-    return seller
-
-
-@pytest.fixture
-async def product(db_session, seller):
+async def product(db_session):
     """Создаёт товар со статусом CREATED для тестов SKU."""
     category_id = uuid4()
     cat = Category(id=category_id, name="Test Category")
     db_session.add(cat)
     prod = Product(
         id=uuid4(),
-        seller_id=seller.id,
+        seller_id=TEST_SELLER_ID,
         category_id=category_id,
         title="Test Product {uuid4()}",
         slug=f"test-product-{uuid4().hex[:8]}",

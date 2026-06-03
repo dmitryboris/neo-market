@@ -13,6 +13,9 @@ jobs:
         test-file:
           - US-B2B-01.py
           - US-B2B-02.py
+          - US-B2B-03.py
+          - US-B2B-04.py
+          - US-B2B-05.py
 
     services:
       postgres:
