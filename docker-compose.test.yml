@@ -4,7 +4,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: b2b_test
+      POSTGRES_DB: b2b
     ports:
       - "5433:5432"
 

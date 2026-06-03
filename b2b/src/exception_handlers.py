@@ -32,5 +32,5 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 async def unhandled_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=500,
-        content={"code": "INTERNAL_SERVER_ERROR", "message": "Внутренняя ошибка сервера"}
+        content={"code": "INTERNAL_SERVER_ERROR", "message": "INTERNAL_SERVER_ERROR"}
     )

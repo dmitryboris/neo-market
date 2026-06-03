@@ -69,6 +69,7 @@ async def create_product(
         seller_id=seller_id,
         category_id=category_uuid,
         title=request.title,
+        slug=request.slug,
         description=request.description,
         status="CREATED"
     )

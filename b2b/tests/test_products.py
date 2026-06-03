@@ -18,6 +18,8 @@ async def test_create_product_201(client, db_session, valid_payload):
     valid_payload["category_id"] = str(category_id)
 
     response = await client.post("/api/v1/products", json=valid_payload)
+    if response.status_code != 201:
+        print(f"ERROR {response.status_code}: {response.text}")
     assert response.status_code == 201
     data = response.json()
     assert data["status"] == "CREATED"

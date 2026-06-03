@@ -77,6 +77,7 @@ def valid_payload():
     return {
         "category_id": str(uuid4()),
         "title": f"Test Product {uuid4()}",
+        "slug": f"test-product-{uuid4().hex[:8]}",
         "description": "Test desc",
         "images": [{"url": "http://ex.com/i.jpg", "ordering": 0}],
         "characteristics": [{"name": "Brand", "value": "X"}]
@@ -118,8 +119,11 @@ async def product(db_session, seller):
         id=uuid4(),
         seller_id=seller.id,
         category_id=category_id,
-        title="Test Product",
+        title="Test Product {uuid4()}",
+        slug=f"test-product-{uuid4().hex[:8]}",
         description="Test description",
+        images=[{"url": "http://ex.com/i.jpg", "ordering": 0}],
+        characteristics=[{"name": "Brand", "value": "X"}],
         status=ProductStatus.CREATED
     )
     db_session.add(prod)

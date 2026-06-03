@@ -20,7 +20,7 @@ class ProductImageCreate(BaseModel):
 
 
 class ProductCreate(BaseModel):
-    category_id: UUID
+    category_id: UUID | None = None
     title: str = Field(..., min_length=1, max_length=255)
     description: str = Field(..., min_length=1, max_length=5000)
     slug: str | None = None
