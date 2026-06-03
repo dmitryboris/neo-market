@@ -49,7 +49,12 @@ class Product(Base, TimestampMixin):
     )
     deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     blocked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    blocking_reason_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    blocking_reason_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("blocking_reasons.id", ondelete="RESTRICT"),
+        nullable=True,
+        default=None,
+    )
     moderator_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     seller: Mapped["Seller"] = relationship(back_populates="products")
