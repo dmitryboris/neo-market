@@ -8,7 +8,25 @@ from src.database import get_session, Base, settings
 from src.dependencies import get_current_user
 from src.models import Seller, ProductStatus, Category, Product
 
-from tests.conftest import TEST_SELLER_ID, _create_category
+from tests.conftest import TEST_SELLER_ID
+
+
+@pytest.fixture
+def valid_payload():
+    return {
+        "category_id": str(uuid4()),
+        "title": f"Test Product {uuid4()}",
+        "slug": f"test-product-{uuid4().hex[:8]}",
+        "description": "Test desc",
+        "images": [{"url": "http://ex.com/i.jpg", "ordering": 0}],
+        "characteristics": [{"name": "Brand", "value": "X"}]
+    }
+
+
+async def _create_category(session, category_id):
+    cat = Category(id=category_id, name="Test Category")
+    session.add(cat)
+    await session.flush()
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,4 @@
-name: Run tests
+name: Run
 
 on:
   pull_request:
@@ -11,8 +11,11 @@ jobs:
       fail-fast: false
       matrix:
         test-file:
-          - test_products.py
-          - test_skus.py
+          - US-B2B-01.py
+          - US-B2B-02.py
+          - US-B2B-03.py
+          - US-B2B-04.py
+          - US-B2B-05.py
 
     services:
       postgres:

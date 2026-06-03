@@ -3,8 +3,32 @@ from uuid import uuid4
 from unittest.mock import patch
 from sqlalchemy import select
 from httpx import AsyncClient
-from src.models import SKU, Product, ProductStatus
-from tests.conftest import TEST_SELLER_ID, _create_category
+from src.models import SKU, Product, ProductStatus, Seller, Category
+
+from tests.conftest import TEST_SELLER_ID
+
+
+@pytest.fixture
+async def product(db_session):
+    """Создаёт товар со статусом CREATED для тестов SKU."""
+    category_id = uuid4()
+    cat = Category(id=category_id, name="Test Category")
+    db_session.add(cat)
+    prod = Product(
+        id=uuid4(),
+        seller_id=TEST_SELLER_ID,
+        category_id=category_id,
+        title="Test Product {uuid4()}",
+        slug=f"test-product-{uuid4().hex[:8]}",
+        description="Test description",
+        # images=[{"url": "http://ex.com/i.jpg", "ordering": 0}],
+        # characteristics=[{"name": "Brand", "value": "X"}],
+        status=ProductStatus.CREATED
+    )
+    db_session.add(prod)
+    await db_session.commit()
+    await db_session.refresh(prod)
+    return prod
 
 
 @pytest.mark.asyncio
