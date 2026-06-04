@@ -19,7 +19,7 @@ class SKUImageResponse(BaseModel):
 
 class SKUCreate(BaseModel):
     product_id: UUID
-    name: str = Field(..., min_length=1, max_length=255)
+    name: str | None = None
     price: int = Field(..., ge=0)
     cost_price: int | None = None
     discount: int = Field(default=0, ge=0)

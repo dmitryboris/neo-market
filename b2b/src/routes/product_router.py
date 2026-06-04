@@ -27,8 +27,7 @@ async def create_product_endpoint(
         session: AsyncSession = Depends(get_session),
         current_seller: Seller = Depends(get_current_user)
 ):
-    product = await product_service.create_product(session, current_seller.id, request, request.category_id)
-    return product
+    return await product_service.create_product(session, current_seller.id, request, request.category_id)
 
 
 @product_router.get("", response_model=ProductPaginatedResponse)

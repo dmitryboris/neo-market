@@ -30,6 +30,41 @@ class CategoryInvalid(DomainException):
         super().__init__(code="INVALID_REQUEST", message=message)
 
 
+class ProductNotFound(DomainException):
+    def __init__(self, message="Product not found"):
+        super().__init__(code="NOT_FOUND", message=message, status_code=404)
+
+
+class ProductHardBlocked(DomainException):
+    def __init__(self, message="Cannot add SKU to hard-blocked product"):
+        super().__init__(code="FORBIDDEN", message=message, status_code=403)
+
+
+class SKUPriceInvalid(DomainException):
+    def __init__(self, message="price must be a positive integer (kopecks)"):
+        super().__init__(code="INVALID_REQUEST", message=message)
+
+
+class SKUCostPriceInvalid(DomainException):
+    def __init__(self, message="cost_price must be a positive integer (kopecks)"):
+        super().__init__(code="INVALID_REQUEST", message=message)
+
+
+class SKUNameEmpty(DomainException):
+    def __init__(self, message="name is required"):
+        super().__init__(code="INVALID_REQUEST", message=message)
+
+
+class SKUNameInvalid(DomainException):
+    def __init__(self, message="name must be 1-255 characters"):
+        super().__init__(code="INVALID_REQUEST", message=message)
+
+
+class SKUImageNotFound(DomainException):
+    def __init__(self, message="image is required"):
+        super().__init__(code="INVALID_REQUEST", message=message)
+
+
 class CategoryParentNotFound(Exception):
     pass
 
@@ -63,10 +98,6 @@ class InvoiceAlreadyAccepted(Exception):
 
 
 class InvoiceCannotDeleteAccepted(Exception):
-    pass
-
-
-class ProductNotFound(Exception):
     pass
 
 

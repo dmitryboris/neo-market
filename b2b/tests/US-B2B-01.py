@@ -97,3 +97,64 @@ async def test_missing_category_400(client, valid_payload):
     response = await client.post("/api/v1/products", json=payload)
     assert response.status_code == 400
     assert "category" in response.text.lower()
+
+# Доп тесты на кастом ошибки
+
+@pytest.mark.asyncio
+async def test_create_product_empty_title_returns_400(client, valid_payload):
+    """Пустой title возвращает 400 с кодом INVALID_REQUEST."""
+    payload = valid_payload.copy()
+    payload["title"] = ""
+    response = await client.post("/api/v1/products", json=payload)
+    assert response.status_code == 400
+    data = response.json()
+    assert data["code"] == "INVALID_REQUEST"
+    assert data["message"] == "title is required"
+
+
+@pytest.mark.asyncio
+async def test_create_product_title_too_long_returns_400(client, valid_payload):
+    """title длиннее 255 символов возвращает 400."""
+    payload = valid_payload.copy()
+    payload["title"] = "a" * 256
+    response = await client.post("/api/v1/products", json=payload)
+    assert response.status_code == 400
+    data = response.json()
+    assert data["code"] == "INVALID_REQUEST"
+    assert data["message"] == "title must be 1-255 characters"
+
+
+@pytest.mark.asyncio
+async def test_create_product_nonexistent_category_returns_400(client, valid_payload):
+    """category_id не существует (валидный UUID, но нет в БД) возвращает 400."""
+    payload = valid_payload.copy()
+    payload["category_id"] = str(uuid4())
+    response = await client.post("/api/v1/products", json=payload)
+    assert response.status_code == 400
+    data = response.json()
+    assert data["code"] == "INVALID_REQUEST"
+    assert data["message"] == "Category not found"
+
+
+@pytest.mark.asyncio
+async def test_create_product_missing_images_returns_400_format(client, valid_payload):
+    """Отсутствие изображений возвращает 400 с точным сообщением."""
+    payload = valid_payload.copy()
+    del payload["images"]
+    response = await client.post("/api/v1/products", json=payload)
+    assert response.status_code == 400
+    data = response.json()
+    assert data["code"] == "INVALID_REQUEST"
+    assert data["message"] == "At least one image is required"
+
+
+@pytest.mark.asyncio
+async def test_create_product_invalid_category_uuid_returns_400(client, valid_payload):
+    """Невалидный UUID в category_id возвращает 400."""
+    payload = valid_payload.copy()
+    payload["category_id"] = "not-a-valid-uuid"
+    response = await client.post("/api/v1/products", json=payload)
+    assert response.status_code == 400
+    data = response.json()
+    assert data["code"] == "INVALID_REQUEST"
+    assert data["message"] == "category_id must be a valid UUID"
