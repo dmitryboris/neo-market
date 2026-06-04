@@ -2,7 +2,7 @@ from http import HTTPStatus
 from fastapi import Request
 from fastapi.exceptions import HTTPException, RequestValidationError
 from fastapi.responses import JSONResponse
-
+from src.services.exceptions import DomainException
 
 
 async def http_exception_handler(request: Request, exc: HTTPException):
@@ -26,6 +26,13 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(
         status_code=422,
         content={"code": "VALIDATION_ERROR", "message": message}
+    )
+
+
+async def domain_exception_handler(request: Request, exc: DomainException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"code": exc.code, "message": exc.message}
     )
 
 

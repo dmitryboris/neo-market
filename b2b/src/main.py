@@ -6,7 +6,11 @@ from alembic.config import Config
 from alembic import command
 import uvicorn
 
-from src.exception_handlers import http_exception_handler, validation_exception_handler, unhandled_exception_handler
+from src.exception_handlers import (
+    http_exception_handler, validation_exception_handler,
+    domain_exception_handler, unhandled_exception_handler
+)
+from src.services.exceptions import DomainException
 from src.routes import routers
 
 
@@ -26,6 +30,7 @@ app = FastAPI(lifespan=lifespan)
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(DomainException, domain_exception_handler)
 app.add_exception_handler(Exception, unhandled_exception_handler)
 
 for router in routers:

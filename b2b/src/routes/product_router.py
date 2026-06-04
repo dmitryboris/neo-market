@@ -11,18 +11,14 @@ from src.schemas.product import (
 )
 from src.schemas.image import ImageUpdateRequest
 from src.services import product_service, sku_service
-from src.services.exceptions import CategoryNotFound, ProductNotFound, AccessDenied
+from src.services.exceptions import (
+    CategoryNotFound, ProductNotFound, AccessDenied,
+    ProductTitleEmpty, CategoryInvalid, ProductTitleInvalid, ProductImageNotFound
+)
 from src.services.image_service import add_product_image, update_product_image, delete_product_image
 from src.schemas.sku import SKUResponse
 
 product_router = APIRouter(prefix="/products", tags=["Products"])
-
-
-def invalid_request(message: str) -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail={"code": "INVALID_REQUEST", "message": message}
-    )
 
 
 @product_router.post("", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
@@ -31,18 +27,8 @@ async def create_product_endpoint(
         session: AsyncSession = Depends(get_session),
         current_seller: Seller = Depends(get_current_user)
 ):
-    if not request.title or not request.title.strip():
-        raise invalid_request("title is required")
-    if request.category_id is None:
-        raise invalid_request("category_id is required")
-    if not request.images:
-        raise invalid_request("At least one image is required")
-
-    try:
-        product = await product_service.create_product(session, current_seller.id, request, request.category_id)
-        return product
-    except CategoryNotFound:
-        raise invalid_request("Category not found")
+    product = await product_service.create_product(session, current_seller.id, request, request.category_id)
+    return product
 
 
 @product_router.get("", response_model=ProductPaginatedResponse)

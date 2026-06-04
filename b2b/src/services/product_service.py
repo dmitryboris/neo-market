@@ -3,22 +3,28 @@ from sqlalchemy import select, func
 from uuid import UUID
 from typing import Optional, List
 from src.models import Product, Category, ProductImage, ProductCharacteristic, SKU
-from src.schemas.product import ProductCreate, ProductUpdate, ProductShortResponse, ProductPaginatedResponse, ProductStatus
-from src.services.exceptions import CategoryNotFound, ProductNotFound, AccessDenied
+from src.schemas.product import (
+    ProductCreate, ProductUpdate, ProductShortResponse, ProductPaginatedResponse, ProductStatus
+)
+from src.services.exceptions import (
+    CategoryNotFound, ProductNotFound, AccessDenied, ProductTitleEmpty,
+    CategoryInvalid, ProductTitleInvalid, ProductImageNotFound
+)
 from sqlalchemy.orm import selectinload
 
+
 async def get_product_by_id(
-    session: AsyncSession,
-    product_id: UUID,
-    seller_id: Optional[UUID] = None
+        session: AsyncSession,
+        product_id: UUID,
+        seller_id: Optional[UUID] = None
 ) -> Product:
     """Получить товар по ID. Если передан seller_id – проверить принадлежность."""
     stmt = select(Product).where(Product.id == product_id).options(
-            selectinload(Product.images),
-            selectinload(Product.characteristics),
-            selectinload(Product.skus).selectinload(SKU.images),
-            selectinload(Product.skus).selectinload(SKU.characteristics),
-        )
+        selectinload(Product.images),
+        selectinload(Product.characteristics),
+        selectinload(Product.skus).selectinload(SKU.images),
+        selectinload(Product.skus).selectinload(SKU.characteristics),
+    )
     if seller_id:
         stmt = stmt.where(Product.seller_id == seller_id)
     result = await session.execute(stmt)
@@ -29,13 +35,14 @@ async def get_product_by_id(
         raise AccessDenied("You do not have access to this product")
     return product
 
+
 async def get_my_products(
-    session: AsyncSession,
-    seller_id: UUID,
-    limit: int = 20,
-    offset: int = 0,
-    status: ProductStatus | None = None,
-    include_deleted: bool = False,
+        session: AsyncSession,
+        seller_id: UUID,
+        limit: int = 20,
+        offset: int = 0,
+        status: ProductStatus | None = None,
+        include_deleted: bool = False,
 ) -> ProductPaginatedResponse:
     query = select(Product).where(Product.seller_id == seller_id)
     if status:
@@ -54,16 +61,31 @@ async def get_my_products(
         offset=offset,
     )
 
+
 async def create_product(
-    session: AsyncSession,
-    seller_id: UUID,
-    request: ProductCreate,
-    category_uuid: UUID
+        session: AsyncSession,
+        seller_id: UUID,
+        request: ProductCreate,
+        category_uuid: UUID
 ) -> Product:
+    if not request.title or not request.title.strip():
+        raise ProductTitleEmpty()
+    if len(request.title) < 1 or len(request.title) > 255:
+        raise ProductTitleInvalid()
+    if request.category_id is None:
+        raise CategoryNotFound()
+    if not request.images:
+        raise ProductImageNotFound()
+
+    try:
+        _ = UUID(str(request.category_id))
+    except (ValueError, AttributeError, TypeError):
+        raise CategoryInvalid()
+
     cat_result = await session.execute(select(Category).where(Category.id == category_uuid))
     category = cat_result.scalar_one_or_none()
     if not category:
-        raise CategoryNotFound(f"Category {category_uuid} not found")
+        raise CategoryNotFound()
 
     product = Product(
         seller_id=seller_id,
@@ -96,10 +118,11 @@ async def create_product(
     await session.refresh(product, attribute_names=["images", "characteristics", "skus", "category"])
     return product
 
+
 async def update_product(
-    session: AsyncSession,
-    product: Product,
-    request: ProductUpdate
+        session: AsyncSession,
+        product: Product,
+        request: ProductUpdate
 ) -> Product:
     """Обновить поля товара (category, title, description, status)."""
     if request.category_id is not None:
@@ -117,6 +140,7 @@ async def update_product(
     await session.commit()
     await session.refresh(product, attribute_names=["images", "characteristics", "skus", "category"])
     return await get_product_by_id(session, product.id)
+
 
 async def delete_product(session: AsyncSession, product: Product) -> None:
     """Удалить товар (каскадно удалятся изображения, характеристики, SKU)."""
