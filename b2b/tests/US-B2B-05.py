@@ -12,7 +12,7 @@ from src.models import (
     FieldReport,
 )
 from tests.conftest import TEST_SELLER_ID
-
+from src.config import settings
 
 
 @pytest.fixture
@@ -77,6 +77,8 @@ async def blocked_product_with_details(db_session):
         comment="Bad content",
     )
     db_session.add(reason)
+
+    prod.blocking_reason = reason
 
     report1 = FieldReport(
         id=uuid4(),
@@ -186,3 +188,38 @@ async def test_get_nonexistent_returns_404(client):
     assert response.status_code == 404
     data = response.json()
     assert data["code"] == "NOT_FOUND"
+
+
+@pytest.mark.asyncio
+async def test_moderation_service_invalid_key_returns_401(client, other_seller_product):
+    response = await client.get(
+        f"/api/v1/products/{other_seller_product.id}",
+        headers={"X-Service-Key": "wrong-key-123"}
+    )
+    assert response.status_code == 401
+    data = response.json()
+    assert data["code"] == "UNAUTHORIZED"
+    assert "Invalid service key" in data["message"]
+
+
+@pytest.mark.asyncio
+async def test_moderation_service_can_access_any_product(client, other_seller_product):
+    response = await client.get(
+        f"/api/v1/products/{other_seller_product.id}",
+        headers={"X-Service-Key": settings.B2B_TO_MOD_KEY}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == str(other_seller_product.id)
+    for sku in data.get("skus", []):
+        assert "cost_price" not in sku
+        assert "reserved_quantity" not in sku
+
+
+@pytest.mark.asyncio
+async def test_invalid_uuid_returns_400(client):
+    response = await client.get("/api/v1/products/not-a-valid-uuid")
+    assert response.status_code == 400
+    data = response.json()
+    assert data["code"] == "INVALID_REQUEST"
+    assert "valid UUID" in data["message"]

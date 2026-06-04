@@ -65,6 +65,21 @@ class SKUImageNotFound(DomainException):
         super().__init__(code="INVALID_REQUEST", message=message)
 
 
+class InvalidUUIDError(DomainException):
+    def __init__(self, message="id must be a valid UUID"):
+        super().__init__(code="INVALID_REQUEST", message=message, status_code=400)
+
+
+class UnauthorizedServiceKey(DomainException):
+    def __init__(self, message="Invalid service key"):
+        super().__init__(code="UNAUTHORIZED", message=message, status_code=401)
+
+
+class UnauthorizedAccess(DomainException):
+    def __init__(self, message="Not authenticated"):
+        super().__init__(code="UNAUTHORIZED", message=message, status_code=401)
+
+
 class CategoryParentNotFound(Exception):
     pass
 

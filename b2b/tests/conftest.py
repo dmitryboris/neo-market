@@ -6,7 +6,7 @@ from httpx import AsyncClient, ASGITransport
 
 from src.main import app
 from src.database import get_session, Base, settings
-from src.dependencies import get_current_user
+from src.dependencies import get_current_user, get_current_user_optional
 from src.models import Seller, Category
 
 
@@ -61,6 +61,7 @@ def override_dependencies(db_session):
 
     app.dependency_overrides[get_session] = _get_session
     app.dependency_overrides[get_current_user] = lambda: TEST_SELLER
+    app.dependency_overrides[get_current_user_optional] = lambda: TEST_SELLER
     yield
     app.dependency_overrides.clear()
 

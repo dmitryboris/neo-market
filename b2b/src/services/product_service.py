@@ -8,31 +8,37 @@ from src.schemas.product import (
 )
 from src.services.exceptions import (
     CategoryNotFound, ProductNotFound, AccessDenied, ProductTitleEmpty,
-    CategoryInvalid, ProductTitleInvalid, ProductImageNotFound
+    CategoryInvalid, ProductTitleInvalid, ProductImageNotFound, InvalidUUIDError,
 )
 from sqlalchemy.orm import selectinload
 
 
 async def get_product_by_id(
         session: AsyncSession,
-        product_id: UUID,
-        seller_id: Optional[UUID] = None
+        product_id: str,
+        seller_id: UUID | None = None,
 ) -> Product:
     """Получить товар по ID. Если передан seller_id – проверить принадлежность."""
-    stmt = select(Product).where(Product.id == product_id).options(
+    try:
+        product_uuid = UUID(product_id)
+    except ValueError:
+        raise InvalidUUIDError()
+    
+    stmt = select(Product).where(Product.id == product_uuid).options(
         selectinload(Product.images),
         selectinload(Product.characteristics),
         selectinload(Product.skus).selectinload(SKU.images),
         selectinload(Product.skus).selectinload(SKU.characteristics),
+        selectinload(Product.blocking_reason),
+        selectinload(Product.field_reports)
     )
-    if seller_id:
-        stmt = stmt.where(Product.seller_id == seller_id)
+    
     result = await session.execute(stmt)
     product = result.scalar_one_or_none()
     if not product:
-        raise ProductNotFound(f"Product {product_id} not found")
-    if seller_id and product.seller_id != seller_id:
-        raise AccessDenied("You do not have access to this product")
+        raise ProductNotFound()
+    if seller_id is not None and product.seller_id != seller_id:
+        raise ProductNotFound()
     return product
 
 
