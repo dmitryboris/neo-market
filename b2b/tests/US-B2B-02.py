@@ -148,3 +148,89 @@ async def test_missing_image_returns_400(client, db_session, product):
     response = await client.post("/api/v1/skus", json=sku_payload)
     assert response.status_code == 400
     assert "image" in response.text.lower()
+
+# Доп тесты на кастом ошибки
+
+@pytest.mark.asyncio
+async def test_sku_product_not_found_returns_404(client):
+    """Создание SKU для несуществующего product_id возвращает 404."""
+    sku_payload = {
+        "product_id": str(uuid4()),
+        "name": "Test SKU",
+        "price": 10000,
+        "images": [{"url": "http://ex.com/img.jpg", "ordering": 0}],
+    }
+    response = await client.post("/api/v1/skus", json=sku_payload)
+    if response.status_code != 201:
+        print(f"ERROR {response.status_code}: {response.text}")
+    assert response.status_code == 404
+    data = response.json()
+    assert data["code"] == "NOT_FOUND"
+    assert data["message"] == "Product not found"
+
+
+@pytest.mark.asyncio
+async def test_sku_price_zero_or_negative_returns_400(client, product):
+    """Цена <= 0 возвращает 400 с соответствующим сообщением."""
+    sku_payload = {
+        "product_id": str(product.id),
+        "name": "Bad Price SKU",
+        "price": 0,
+        "images": [{"url": "http://ex.com/img.jpg", "ordering": 0}],
+    }
+    response = await client.post("/api/v1/skus", json=sku_payload)
+    assert response.status_code == 400
+    data = response.json()
+    assert data["code"] == "INVALID_REQUEST"
+    assert data["message"] == "price must be a positive integer (kopecks)"
+
+
+@pytest.mark.asyncio
+async def test_sku_cost_price_zero_or_negative_returns_400(client, product):
+    """cost_price <= 0 возвращает 400 с соответствующим сообщением."""
+    sku_payload = {
+        "product_id": str(product.id),
+        "name": "Bad Cost SKU",
+        "price": 1000,
+        "cost_price": -1,
+        "images": [{"url": "http://ex.com/img.jpg", "ordering": 0}],
+    }
+    response = await client.post("/api/v1/skus", json=sku_payload)
+    assert response.status_code == 400
+    data = response.json()
+    assert data["code"] == "INVALID_REQUEST"
+    assert data["message"] == "cost_price must be a positive integer (kopecks)"
+
+
+@pytest.mark.asyncio
+async def test_sku_empty_name_returns_400(client, product):
+    """Пустое или пробельное имя возвращает 400 с сообщением 'name is required'."""
+    sku_payload = {
+        "product_id": str(product.id),
+        "name": "   ",
+        "price": 1000,
+        "images": [{"url": "http://ex.com/img.jpg", "ordering": 0}],
+    }
+    response = await client.post("/api/v1/skus", json=sku_payload)
+    assert response.status_code == 400
+    data = response.json()
+    assert data["code"] == "INVALID_REQUEST"
+    assert data["message"] == "name is required"
+
+
+@pytest.mark.asyncio
+async def test_sku_missing_image_returns_400(client, product):
+    """Отсутствие изображений возвращает 400 с сообщением 'image is required'.
+    (Дополнительный тест с проверкой точного формата ошибки).
+    """
+    sku_payload = {
+        "product_id": str(product.id),
+        "name": "No Image SKU",
+        "price": 1000,
+        # images отсутствуют
+    }
+    response = await client.post("/api/v1/skus", json=sku_payload)
+    assert response.status_code == 400
+    data = response.json()
+    assert data["code"] == "INVALID_REQUEST"
+    assert data["message"] == "image is required"
