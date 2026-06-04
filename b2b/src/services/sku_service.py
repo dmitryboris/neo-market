@@ -8,6 +8,7 @@ from src.schemas.sku import SKUCreate, SKUUpdate
 from src.services.exceptions import ProductNotFound, AccessDenied, ForbiddenOperation
 from src.config import settings
 import httpx
+from datetime import datetime, timezone
 
 async def get_product_with_access(session: AsyncSession, product_id: uuid.UUID, seller_id: uuid.UUID) -> Product:
     result = await session.execute(
@@ -18,7 +19,7 @@ async def get_product_with_access(session: AsyncSession, product_id: uuid.UUID, 
         raise ProductNotFound("Product not found")
     return product
 
-async def _send_moderation_event(product: Product) -> None:
+async def _send_moderation_event(product: Product, event_type: str = "CREATED") -> None:
     """Фоновый вызов Moderation API (fire-and-forget)"""
     url = f"{settings.MODERATION_URL}/api/v1/events/product"
     headers = {"X-Service-Key": settings.B2B_TO_MOD_KEY}
@@ -27,8 +28,8 @@ async def _send_moderation_event(product: Product) -> None:
         "idempotency_key": idempotency_key,
         "product_id": str(product.id),
         "seller_id": str(product.seller_id),
-        "event": "CREATED",
-        "date": product.created_at.isoformat(),
+        "event": event_type,
+        "date": datetime.now(timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z'),
     }
     async with httpx.AsyncClient(timeout=2.0) as client:
         try:
@@ -80,7 +81,11 @@ async def create_sku(
     if sku_count == 0:
         product.status = ProductStatus.ON_MODERATION
         session.add(product)
-        asyncio.create_task(_send_moderation_event(product))
+        asyncio.create_task(_send_moderation_event(product, event_type="CREATED"))
+    else:
+        if product.status in (ProductStatus.MODERATED, ProductStatus.BLOCKED):
+            product.status = ProductStatus.ON_MODERATION
+            asyncio.create_task(_send_moderation_event(product, event_type="EDITED"))
 
     await session.commit()
     await session.refresh(sku, attribute_names=["images", "characteristics"])

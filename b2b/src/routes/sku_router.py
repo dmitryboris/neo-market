@@ -26,8 +26,10 @@ async def create_sku_endpoint(
 ):
     if not request.name or not request.name.strip():
         raise invalid_request("name is required")
+    if len(request.name) > 255:
+        raise invalid_request("name max len is 255")
     if not request.images or len(request.images) == 0:
-        raise invalid_request("At least one image is required")
+        raise invalid_request("image is required")
     if request.price is None or request.price <= 0:
         raise invalid_request("price must be a positive integer (kopecks)")
     if request.cost_price is None or request.cost_price <= 0:
