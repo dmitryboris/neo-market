@@ -2,9 +2,9 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-COPY b2b/requirements.txt b2b/requirements-dev.txt .
+COPY b2b/requirements.txt b2b/requirements-test.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt -r requirements-dev.txt
+RUN pip install --no-cache-dir -r requirements.txt -r requirements-test.txt
 
 COPY . .
 
