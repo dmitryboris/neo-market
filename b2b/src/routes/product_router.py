@@ -13,12 +13,12 @@ from src.schemas.image import ImageUpdateRequest
 from src.services import product_service, sku_service
 from src.services.exceptions import (
     CategoryNotFound, ProductNotFound, AccessDenied,
+    UnauthorizedServiceKey, UnauthorizedAccess
 )
 from src.schemas.moderation import ProductDetailResponse
 from src.services.image_service import add_product_image, update_product_image, delete_product_image
 from src.schemas.sku import SKUResponse
 from src.config import settings
-from src.services.exceptions import (UnauthorizedServiceKey, UnauthorizedAccess)
 from typing import Union
 
 product_router = APIRouter(prefix="/products", tags=["Products"])
@@ -42,8 +42,7 @@ async def get_my_products(
         session: AsyncSession = Depends(get_session),
         current_seller: Seller = Depends(get_current_user)
 ):
-    data = await product_service.get_my_products(session, current_seller.id, limit, offset, status, include_deleted)
-    return data
+    return await product_service.get_my_products(session, current_seller.id, limit, offset, status, include_deleted)
 
 
 @product_router.get("/{product_id}", response_model=Union[ProductDetailResponse, ProductPublicResponse])

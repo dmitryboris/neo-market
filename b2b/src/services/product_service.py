@@ -8,7 +8,7 @@ from src.schemas.product import (
 )
 from src.services.exceptions import (
     CategoryNotFound, ProductNotFound, AccessDenied, ProductTitleEmpty,
-    CategoryInvalid, ProductTitleInvalid, ProductImageNotFound, InvalidUUIDError,
+    CategoryInvalid, ProductTitleInvalid, ProductImageNotFound, UUIDInvalid,
 )
 from sqlalchemy.orm import selectinload
 
@@ -22,7 +22,7 @@ async def get_product_by_id(
     try:
         product_uuid = UUID(product_id)
     except ValueError:
-        raise InvalidUUIDError()
+        raise UUIDInvalid()
     
     stmt = select(Product).where(Product.id == product_uuid).options(
         selectinload(Product.images),
@@ -35,9 +35,7 @@ async def get_product_by_id(
     
     result = await session.execute(stmt)
     product = result.scalar_one_or_none()
-    if not product:
-        raise ProductNotFound()
-    if seller_id is not None and product.seller_id != seller_id:
+    if not product or (seller_id is not None and product.seller_id != seller_id):
         raise ProductNotFound()
     return product
 

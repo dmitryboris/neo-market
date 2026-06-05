@@ -65,7 +65,7 @@ class SKUImageNotFound(DomainException):
         super().__init__(code="INVALID_REQUEST", message=message)
 
 
-class InvalidUUIDError(DomainException):
+class UUIDInvalid(DomainException):
     def __init__(self, message="id must be a valid UUID"):
         super().__init__(code="INVALID_REQUEST", message=message, status_code=400)
 
