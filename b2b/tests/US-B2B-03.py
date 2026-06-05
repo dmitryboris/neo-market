@@ -205,7 +205,8 @@ async def test_edit_hard_blocked_returns_403(client, hard_blocked_product):
     )
     assert response.status_code == 403
     data = response.json()
-    assert "hard-blocked" in data["message"].lower() or "hard_blocked" in data["message"].lower()
+    assert data["code"] == "FORBIDDEN"
+    assert data["message"] == "Cannot edit hard-blocked product"
 
 
 @pytest.mark.asyncio
