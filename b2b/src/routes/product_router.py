@@ -1,22 +1,25 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_session
-from src.dependencies import get_current_user
+from src.dependencies import get_current_user, get_current_user_optional
 from src.models import Seller
 from src.schemas.product import (
     ProductCreate, ProductResponse, ProductUpdate,
     ProductPaginatedResponse, ProductImageCreate,
-    ProductImageResponse, ProductStatus
+    ProductImageResponse, ProductStatus, ProductPublicResponse
 )
 from src.schemas.image import ImageUpdateRequest
 from src.services import product_service, sku_service
 from src.services.exceptions import (
     CategoryNotFound, ProductNotFound, AccessDenied,
-    ProductTitleEmpty, CategoryInvalid, ProductTitleInvalid, ProductImageNotFound
+    UnauthorizedServiceKey, UnauthorizedAccess
 )
+from src.schemas.moderation import ProductDetailResponse
 from src.services.image_service import add_product_image, update_product_image, delete_product_image
 from src.schemas.sku import SKUResponse
+from src.config import settings
+from typing import Union
 
 product_router = APIRouter(prefix="/products", tags=["Products"])
 
@@ -39,21 +42,26 @@ async def get_my_products(
         session: AsyncSession = Depends(get_session),
         current_seller: Seller = Depends(get_current_user)
 ):
-    data = await product_service.get_my_products(session, current_seller.id, limit, offset, status, include_deleted)
-    return data
+    return await product_service.get_my_products(session, current_seller.id, limit, offset, status, include_deleted)
 
 
-@product_router.get("/{product_id}", response_model=ProductResponse)
+@product_router.get("/{product_id}", response_model=Union[ProductDetailResponse, ProductPublicResponse])
 async def get_product(
-        product_id: UUID,
+        product_id: str,
+        x_service_key: str | None = Header(None, alias="X-Service-Key"),
         session: AsyncSession = Depends(get_session),
-        current_seller: Seller = Depends(get_current_user)
+        current_seller: Seller | None = Depends(get_current_user_optional),
 ):
-    try:
+    if x_service_key:
+        if x_service_key != settings.B2B_TO_MOD_KEY:
+            raise UnauthorizedServiceKey()
+        product = await product_service.get_product_by_id(session, product_id, seller_id=None)
+        return ProductPublicResponse.model_validate(product, from_attributes=True)
+    else:
+        if not current_seller:
+            raise UnauthorizedAccess()
         product = await product_service.get_product_by_id(session, product_id, seller_id=current_seller.id)
-        return product
-    except (ProductNotFound, AccessDenied) as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        return ProductDetailResponse.model_validate(product, from_attributes=True)
 
 
 @product_router.patch("/{product_id}", response_model=ProductResponse)

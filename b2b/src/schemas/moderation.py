@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict
 from src.models.product import ProductStatus
 from src.schemas.characteristic import CharacteristicResponse
 from src.schemas.sku import SKUResponse
-from src.schemas.produce import ProductImageResponse
+from src.schemas.product import ProductImageResponse
 
 
 class ModerationEventType(str, Enum):
@@ -26,6 +26,8 @@ class ModerationEventRequest(BaseModel):
 
 
 class FieldReport(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     field_name: str
     comment: str
     sku_id: UUID | None = None
