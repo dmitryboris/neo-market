@@ -1,7 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from uuid import UUID
-from typing import Optional, List
 from src.models import Product, Category, ProductImage, ProductCharacteristic, SKU
 from src.schemas.product import (
     ProductCreate, ProductUpdate, ProductShortResponse, ProductPaginatedResponse, ProductStatus
@@ -9,8 +8,10 @@ from src.schemas.product import (
 from src.services.exceptions import (
     CategoryNotFound, ProductNotFound, AccessDenied, ProductTitleEmpty,
     CategoryInvalid, ProductTitleInvalid, ProductImageNotFound, UUIDInvalid,
+    ProductHardBlocked
 )
 from sqlalchemy.orm import selectinload
+from src.services.communication_service import _send_moderation_event
 
 
 async def get_product_by_id(
@@ -129,18 +130,47 @@ async def update_product(
         request: ProductUpdate
 ) -> Product:
     """Обновить поля товара (category, title, description, status)."""
-    if request.category_id is not None:
-        cat_result = await session.execute(select(Category).where(Category.id == request.category_id))
-        category = cat_result.scalar_one_or_none()
-        if not category:
-            raise CategoryNotFound(f"Category {request.category_id} not found")
-        product.category_id = request.category_id
+
+    if product.status == ProductStatus.HARD_BLOCKED:
+        raise ProductHardBlocked("Cannot edit hard-blocked product")
+
     if request.title is not None:
+        if not request.title.strip():
+            raise ProductTitleEmpty()
+        if len(request.title) < 1 or len(request.title) > 255:
+            raise ProductTitleInvalid()
         product.title = request.title
+
+    if request.category_id is not None:
+        try:
+            category_uuid = UUID(request.category_id)
+        except (ValueError, AttributeError, TypeError):
+            raise CategoryInvalid()
+        cat_result = await session.execute(
+            select(Category).where(Category.id == category_uuid)
+        )
+        if not cat_result.scalar_one_or_none():
+            raise CategoryNotFound()
+        product.category_id = category_uuid
+
     if request.description is not None:
         product.description = request.description
-    if request.status is not None:
-        product.status = request.status
+
+    if request.characteristics is not None:
+        for existing_char in product.characteristics:
+            await session.delete(existing_char)
+        for ch in request.characteristics:
+            new_char = ProductCharacteristic(
+                product_id=product.id,
+                name=ch.name,
+                value=ch.value
+            )
+            session.add(new_char)
+
+    if product.status in (ProductStatus.MODERATED, ProductStatus.BLOCKED):
+        product.status = ProductStatus.ON_MODERATION
+        await _send_moderation_event(session, product, "EDITED")
+
     await session.commit()
     await session.refresh(product, attribute_names=["images", "characteristics", "skus", "category"])
     return await get_product_by_id(session, product.id)

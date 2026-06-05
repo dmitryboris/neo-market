@@ -80,6 +80,11 @@ class UnauthorizedAccess(DomainException):
         super().__init__(code="UNAUTHORIZED", message=message, status_code=401)
 
 
+class SKUNotFound(DomainException):
+    def __init__(self, message="SKU not found"):
+        super().__init__(code="NOT_FOUND", message=message, status_code=404)
+
+
 class CategoryParentNotFound(Exception):
     pass
 
@@ -114,11 +119,6 @@ class InvoiceAlreadyAccepted(Exception):
 
 class InvoiceCannotDeleteAccepted(Exception):
     pass
-
-
-class SKUNotFound(Exception):
-    pass
-
 
 class SKUNotBelongsToSeller(Exception):
     pass

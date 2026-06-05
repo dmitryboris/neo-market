@@ -29,9 +29,9 @@ class ProductCreate(BaseModel):
 
 
 class ProductUpdate(BaseModel):
-    title: str | None = Field(default=None, min_length=1, max_length=255)
+    title: str | None = None
     description: str | None = Field(default=None, max_length=5000)
-    category_id: UUID | None = None
+    category_id: str | None = None
     characteristics: list[Characteristic] | None = None
 
 

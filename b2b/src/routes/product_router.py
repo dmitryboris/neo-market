@@ -25,7 +25,7 @@ product_router = APIRouter(prefix="/products", tags=["Products"])
 
 
 @product_router.post("", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
-async def create_product_endpoint(
+async def create_product(
         request: ProductCreate,
         session: AsyncSession = Depends(get_session),
         current_seller: Seller = Depends(get_current_user)
@@ -71,14 +71,9 @@ async def update_product(
         session: AsyncSession = Depends(get_session),
         current_seller: Seller = Depends(get_current_user)
 ):
-    try:
-        product = await product_service.get_product_by_id(session, product_id, seller_id=current_seller.id)
-        updated = await product_service.update_product(session, product, request)
-        return updated
-    except (ProductNotFound, AccessDenied) as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except CategoryNotFound as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    product = await product_service.get_product_by_id(session, product_id, seller_id=current_seller.id)
+    return await product_service.update_product(session, product, request)
+
 
 
 @product_router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
