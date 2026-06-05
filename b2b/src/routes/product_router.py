@@ -71,8 +71,8 @@ async def update_product(
         session: AsyncSession = Depends(get_session),
         current_seller: Seller = Depends(get_current_user)
 ):
-    product = await product_service.get_product_by_id(session, product_id, seller_id=current_seller.id)
-    return await product_service.update_product(session, product, request)
+    product = await product_service.get_product_by_id(session, product_id, seller_id=None)
+    return await product_service.update_product(session, product, current_seller.id, request)
 
 
 

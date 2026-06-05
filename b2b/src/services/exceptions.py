@@ -85,6 +85,11 @@ class SKUNotFound(DomainException):
         super().__init__(code="NOT_FOUND", message=message, status_code=404)
 
 
+class NotOwner(DomainException):
+    def __init__(self, message: str = "Product does not belong to the authenticated seller"):
+        super().__init__(code="NOT_OWNER", message=message, status_code=403)
+
+
 class CategoryParentNotFound(Exception):
     pass
 
@@ -119,6 +124,7 @@ class InvoiceAlreadyAccepted(Exception):
 
 class InvoiceCannotDeleteAccepted(Exception):
     pass
+
 
 class SKUNotBelongsToSeller(Exception):
     pass

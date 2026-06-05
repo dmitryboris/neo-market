@@ -40,7 +40,7 @@ async def update_sku(
         current_seller: Seller = Depends(get_current_user),
 ):
     sku = await sku_service.get_sku_by_id(session, sku_id, current_seller.id)
-    return await sku_service.update_sku(session, sku, request)
+    return await sku_service.update_sku(session, sku, current_seller.id, request)
 
 
 @sku_router.delete("/{sku_id}", status_code=status.HTTP_204_NO_CONTENT)

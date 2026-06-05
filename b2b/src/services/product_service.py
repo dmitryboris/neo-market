@@ -8,7 +8,7 @@ from src.schemas.product import (
 from src.services.exceptions import (
     CategoryNotFound, ProductNotFound, AccessDenied, ProductTitleEmpty,
     CategoryInvalid, ProductTitleInvalid, ProductImageNotFound, UUIDInvalid,
-    ProductHardBlocked
+    ProductHardBlocked, NotOwner
 )
 from sqlalchemy.orm import selectinload
 from src.services.communication_service import _send_moderation_event
@@ -127,9 +127,14 @@ async def create_product(
 async def update_product(
         session: AsyncSession,
         product: Product,
+        seller_id: UUID,
         request: ProductUpdate
 ) -> Product:
     """Обновить поля товара (category, title, description, status)."""
+    if not product:
+        raise ProductNotFound()
+    if seller_id != product.seller_id:
+        raise NotOwner()
 
     if product.status == ProductStatus.HARD_BLOCKED:
         raise ProductHardBlocked("Cannot edit hard-blocked product")

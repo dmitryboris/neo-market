@@ -217,4 +217,5 @@ async def test_edit_others_product_returns_403(client, others_product):
     )
     assert response.status_code == 403
     data = response.json()
-    assert "access denied" in data["message"].lower() or "forbidden" in data["message"].lower()
+    assert data["code"] == "NOT_OWNER"
+    assert data["message"] == "Product does not belong to the authenticated seller"

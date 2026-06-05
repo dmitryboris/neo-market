@@ -6,7 +6,7 @@ from sqlalchemy.orm import selectinload
 from src.models import SKU, Product, ProductStatus, SKUImage, SKUCharacteristic
 from src.schemas.sku import SKUCreate, SKUUpdate
 from src.services.exceptions import (
-    ProductNotFound, ProductHardBlocked, SKUNameEmpty, SKUNameInvalid,
+    ProductNotFound, ProductHardBlocked, SKUNameEmpty, SKUNameInvalid, NotOwner,
     SKUImageNotFound, SKUPriceInvalid, SKUCostPriceInvalid, SKUNotFound, UUIDInvalid
 )
 from src.config import settings
@@ -113,7 +113,7 @@ async def get_sku_by_id(
     result = await session.execute(stmt)
     sku = result.scalar_one_or_none()
 
-    if not sku or sku.product.seller_id != seller_id:
+    if not sku:
         raise SKUNotFound()
     return sku
 
@@ -121,11 +121,15 @@ async def get_sku_by_id(
 async def update_sku(
         session: AsyncSession,
         sku: SKU,
+        seller_id: UUID,
         request: SKUUpdate
 ) -> SKU:
     """Обновить SKU с валидацией и побочными эффектами на товаре."""
-
     product = sku.product
+
+    if seller_id != product.seller_id:
+        raise NotOwner()
+
     if product.status == ProductStatus.HARD_BLOCKED:
         raise ProductHardBlocked("Cannot edit hard-blocked product")
 
