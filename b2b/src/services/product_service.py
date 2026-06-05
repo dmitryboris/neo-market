@@ -169,11 +169,11 @@ async def update_product(
 
     if product.status in (ProductStatus.MODERATED, ProductStatus.BLOCKED):
         product.status = ProductStatus.ON_MODERATION
-        await _send_moderation_event(session, product, "EDITED")
+        await _send_moderation_event(product, "EDITED")
 
     await session.commit()
     await session.refresh(product, attribute_names=["images", "characteristics", "skus", "category"])
-    return await get_product_by_id(session, product.id)
+    return await get_product_by_id(session, str(product.id))
 
 
 async def delete_product(session: AsyncSession, product: Product) -> None:

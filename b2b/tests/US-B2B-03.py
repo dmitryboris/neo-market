@@ -115,7 +115,7 @@ async def test_edit_moderated_product_returns_to_on_moderation(
 
     patch_payload = {"title": "Updated Moderated Title"}
 
-    with patch("src.services.moderation_service.send_event") as mock_event:
+    with patch("src.services.product_service._send_moderation_event") as mock_event:
         response = await client.patch(
             f"/api/v1/products/{moderated_product.id}", json=patch_payload
         )
@@ -126,8 +126,8 @@ async def test_edit_moderated_product_returns_to_on_moderation(
 
         mock_event.assert_called_once()
         args, _ = mock_event.call_args
-        assert args[0] == "EDITED"
-        assert args[1].id == moderated_product.id
+        assert args[1] == "EDITED"
+        assert args[0].id == moderated_product.id
 
 
 @pytest.mark.asyncio
@@ -139,7 +139,7 @@ async def test_edit_blocked_product_returns_to_on_moderation(
 
     patch_payload = {"description": "Updated description"}
 
-    with patch("src.services.moderation_service.send_event") as mock_event:
+    with patch("src.services.product_service._send_moderation_event") as mock_event:
         response = await client.patch(
             f"/api/v1/products/{blocked_product.id}", json=patch_payload
         )
@@ -150,8 +150,8 @@ async def test_edit_blocked_product_returns_to_on_moderation(
 
         mock_event.assert_called_once()
         args, _ = mock_event.call_args
-        assert args[0] == "EDITED"
-        assert args[1].id == blocked_product.id
+        assert args[1] == "EDITED"
+        assert args[0].id == blocked_product.id
 
 
 @pytest.mark.asyncio
@@ -189,7 +189,7 @@ async def test_reserves_preserved_after_sku_edit(client, db_session):
 
     reserved_before = sku.reserved_quantity
     update_payload = {"name": "Updated SKU", "price": 1200}
-    response = await client.put(f"/api/v1/skus/{sku.id}", json=update_payload)
+    response = await client.patch(f"/api/v1/skus/{sku.id}", json=update_payload)
     assert response.status_code == 200
 
     await db_session.refresh(sku)

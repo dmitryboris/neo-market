@@ -14,7 +14,7 @@ sku_router = APIRouter(prefix="/skus", tags=["SKU"])
 
 
 @sku_router.post("", response_model=SKUResponse, status_code=status.HTTP_201_CREATED)
-async def create_sku_endpoint(
+async def create_sku(
         request: SKUCreate,
         session: AsyncSession = Depends(get_session),
         current_seller: Seller = Depends(get_current_user),
@@ -24,30 +24,23 @@ async def create_sku_endpoint(
 
 @sku_router.get("/{sku_id}", response_model=SKUResponse)
 async def get_sku(
-        sku_id: UUID,
+        sku_id: str,
         session: AsyncSession = Depends(get_session),
         current_seller: Seller = Depends(get_current_user),
 ):
-    sku = await sku_service.get_sku_by_id(session, sku_id, current_seller.id)
-    if not sku:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail={"code": "NOT_FOUND", "message": "SKU not found"})
-    return sku
+    return await sku_service.get_sku_by_id(session, sku_id, current_seller.id)
+
 
 
 @sku_router.patch("/{sku_id}", response_model=SKUResponse)
 async def update_sku(
-        sku_id: UUID,
+        sku_id: str,
         request: SKUUpdate,
         session: AsyncSession = Depends(get_session),
         current_seller: Seller = Depends(get_current_user),
 ):
     sku = await sku_service.get_sku_by_id(session, sku_id, current_seller.id)
-    if not sku:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail={"code": "NOT_FOUND", "message": "SKU not found"})
-    updated = await sku_service.update_sku(session, sku, request)
-    return updated
+    return await sku_service.update_sku(session, sku, request)
 
 
 @sku_router.delete("/{sku_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime, timezone
 from src.models import Product
 
+
 async def _send_moderation_event(product: Product, event_type: str = "CREATED") -> None:
     """Фоновый вызов Moderation API (fire-and-forget)"""
     url = f"{settings.MODERATION_URL}/api/v1/events/product"

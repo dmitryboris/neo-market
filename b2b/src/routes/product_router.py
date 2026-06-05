@@ -66,7 +66,7 @@ async def get_product(
 
 @product_router.patch("/{product_id}", response_model=ProductResponse)
 async def update_product(
-        product_id: UUID,
+        product_id: str,
         request: ProductUpdate,
         session: AsyncSession = Depends(get_session),
         current_seller: Seller = Depends(get_current_user)
