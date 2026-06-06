@@ -16,6 +16,7 @@ jobs:
           - US-B2B-03.py
           - US-B2B-04.py
           - US-B2B-05.py
+          - US-B2B-07.py
 
     services:
       postgres:
