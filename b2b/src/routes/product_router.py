@@ -76,17 +76,16 @@ async def update_product(
 
 
 
-@product_router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+@product_router.delete("/{product_id}", status_code=status.HTTP_200_OK)
 async def delete_product(
-        product_id: UUID,
+        product_id: str,
         session: AsyncSession = Depends(get_session),
         current_seller: Seller = Depends(get_current_user)
 ):
-    try:
-        product = await product_service.get_product_by_id(session, product_id, seller_id=current_seller.id)
-        await product_service.delete_product(session, product)
-    except (ProductNotFound, AccessDenied) as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    product = await product_service.get_product_by_id(session, product_id, seller_id=None)
+    await product_service.delete_product(session, current_seller.id, product)
+    return {"ok": True}
+
 
 
 @product_router.post("/{product_id}/images", response_model=ProductImageResponse, status_code=status.HTTP_201_CREATED)

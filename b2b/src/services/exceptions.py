@@ -90,6 +90,11 @@ class NotOwner(DomainException):
         super().__init__(code="NOT_OWNER", message=message, status_code=403)
 
 
+class ProductAlreadyDeleted(DomainException):
+    def __init__(self, message="Product already deleted"):
+        super().__init__(code="INVALID_REQUEST", message=message, status_code=400)
+
+
 class CategoryParentNotFound(Exception):
     pass
 

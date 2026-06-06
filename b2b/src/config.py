@@ -19,8 +19,10 @@ class Settings(BaseSettings):
     MAX_FILE_SIZE: int = 5 * 1024 * 1024   # 5 MB
     UPLOAD_DIR: str = "uploads"
 
-    MODERATION_URL: str = "https://moderation.example.com"   # значение по умолчанию
+    MODERATION_URL: str = "https://moderation.example.com"
+    B2C_URL: str = "https://b2c.example.com"
     B2B_TO_MOD_KEY: str = "change-me"
+    B2B_TO_B2C_KEY: str = "change-me"
 
     @property
     def database_url(self) -> str:
