@@ -111,3 +111,7 @@ class ProductPublicPaginatedResponse(BaseModel):
     total_count: int
     limit: int
     offset: int
+
+
+class BatchProductRequest(BaseModel):
+    product_ids: list[UUID] = Field(..., max_length=100)

@@ -1,10 +1,11 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Header
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from jose import JWTError
 from src.security import decode_token
 from src.models.seller import Seller
 from src.database import get_session
+from src.config import settings
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token", auto_error=False)
@@ -52,12 +53,27 @@ async def get_current_user(
         )
     return user
 
-def require_role(*roles: str):
-    async def role_checker(current_user: Seller = Depends(get_current_user)) -> Seller:
-        if current_user.role not in roles:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={"code": "FORBIDDEN", "message": "Недостаточно прав"},
-            )
-        return current_user
-    return role_checker
+
+def require_service_key(x_service_key: str | None = Header(default=None, alias="X-Service-Key")) -> str:
+    if not x_service_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"code": "UNAUTHORIZED", "message": "Not authenticated"}
+        )
+    return x_service_key
+
+
+def require_b2c_key(x_service_key: str = Depends(require_service_key)) -> None:
+    if x_service_key != settings.B2C_TO_B2B_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail={"code": "UNAUTHORIZED", "message": "Invalid service key"},
+        )
+    
+
+def require_moderation_key(x_service_key: str = Depends(require_service_key)) -> None:
+    if x_service_key != settings.B2B_TO_MOD_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail={"code": "UNAUTHORIZED", "message": "Invalid service key"}
+        )

@@ -5,6 +5,7 @@ from .invoice_router import invoice_router
 from .seller_router import seller_router
 from .product_router import product_router
 from .sku_router import sku_router
+from .public_router import public_router
 
 routers = [
     auth_router,
@@ -13,5 +14,6 @@ routers = [
     invoice_router,
 #    upload_router,
     product_router,
-    sku_router
+    sku_router,
+    public_router
 ]
