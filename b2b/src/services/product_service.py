@@ -8,10 +8,10 @@ from src.schemas.product import (
 from src.services.exceptions import (
     CategoryNotFound, ProductNotFound, AccessDenied, ProductTitleEmpty,
     CategoryInvalid, ProductTitleInvalid, ProductImageNotFound, UUIDInvalid,
-    ProductHardBlocked, NotOwner
+    ProductHardBlocked, NotOwner, ProductAlreadyDeleted
 )
 from sqlalchemy.orm import selectinload
-from src.services.communication_service import _send_moderation_event
+from src.services.communication_service import _send_moderation_event, _send_b2c_event
 
 
 async def get_product_by_id(
@@ -36,7 +36,9 @@ async def get_product_by_id(
     
     result = await session.execute(stmt)
     product = result.scalar_one_or_none()
-    if not product or (seller_id is not None and product.seller_id != seller_id):
+    if not product:
+        raise ProductNotFound()
+    if seller_id is not None and product.seller_id != seller_id:
         raise ProductNotFound()
     return product
 
@@ -131,8 +133,6 @@ async def update_product(
         request: ProductUpdate
 ) -> Product:
     """Обновить поля товара (category, title, description, status)."""
-    if not product:
-        raise ProductNotFound()
     if seller_id != product.seller_id:
         raise NotOwner()
 
@@ -181,7 +181,21 @@ async def update_product(
     return await get_product_by_id(session, str(product.id))
 
 
-async def delete_product(session: AsyncSession, product: Product) -> None:
-    """Удалить товар (каскадно удалятся изображения, характеристики, SKU)."""
-    await session.delete(product)
+async def delete_product(
+        session: AsyncSession,
+        seller_id: UUID,
+        product: Product
+) -> None:
+    if seller_id != product.seller_id:
+        raise NotOwner()
+
+    if product.deleted:
+        raise ProductAlreadyDeleted()
+
+    product.deleted = True
+    sku_ids = [sku.id for sku in product.skus]
+
+    await _send_moderation_event(product, "DELETED")
+    await _send_b2c_event(product, sku_ids, "PRODUCT_DELETED")
+
     await session.commit()
