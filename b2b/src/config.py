@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     B2C_URL: str = "https://b2c.example.com"
     B2B_TO_MOD_KEY: str = "change-me"
     B2B_TO_B2C_KEY: str = "change-me"
+    B2C_TO_B2B_KEY: str = "change-me"
 
     @property
     def database_url(self) -> str:
