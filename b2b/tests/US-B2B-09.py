@@ -163,12 +163,17 @@ async def test_missing_service_key_returns_401(client, product_for_moderation):
 
 @pytest.mark.asyncio
 async def test_hard_blocked_product_rejects_seller_edits(client, db_session, product_for_moderation):
+    reason = BlockingReason(id=uuid4(), title="Hard block reason", comment="Terminal")
+    db_session.add(reason)
+    await db_session.commit()
+    reason_id = reason.id
+
     event = {
         "idempotency_key": str(uuid4()),
         "product_id": str(product_for_moderation.id),
         "event_type": ModerationEventType.BLOCKED,
         "hard_block": True,
-        "blocking_reason_id": None,
+        "blocking_reason_id": str(reason_id),
         "field_reports": [],
         "occurred_at": "2024-01-01T00:00:00Z"
     }
@@ -195,3 +200,70 @@ async def test_hard_blocked_product_rejects_seller_edits(client, db_session, pro
     assert delete_resp.status_code == 403
     assert "hard-blocked" in delete_resp.text.lower()
 
+@pytest.mark.asyncio
+async def test_missing_idempotency_key_returns_400(client, product_for_moderation):
+    event = {
+        "product_id": str(product_for_moderation.id),
+        "event_type": "MODERATED",
+        "occurred_at": "2024-01-01T00:00:00Z"
+    }
+    response = await client.post(
+        "/api/v1/moderation/events",
+        json=event,
+        headers={"X-Service-Key": settings.B2B_TO_MOD_KEY}
+    )
+    assert response.status_code == 400
+    assert response.json()["code"] == "INVALID_REQUEST"
+    assert "idempotency_key is required" in response.json()["message"]
+
+@pytest.mark.asyncio
+async def test_missing_product_id_returns_400(client):
+    event = {
+        "idempotency_key": str(uuid4()),
+        "event_type": "MODERATED",
+        "occurred_at": "2024-01-01T00:00:00Z"
+    }
+    response = await client.post(
+        "/api/v1/moderation/events",
+        json=event,
+        headers={"X-Service-Key": settings.B2B_TO_MOD_KEY}
+    )
+    assert response.status_code == 400
+    assert response.json()["code"] == "INVALID_REQUEST"
+    assert "product_id is required" in response.json()["message"]
+
+@pytest.mark.asyncio
+async def test_invalid_event_type_returns_400(client, product_for_moderation):
+    event = {
+        "idempotency_key": str(uuid4()),
+        "product_id": str(product_for_moderation.id),
+        "event_type": "INVALID",
+        "occurred_at": "2024-01-01T00:00:00Z"
+    }
+    response = await client.post(
+        "/api/v1/moderation/events",
+        json=event,
+        headers={"X-Service-Key": settings.B2B_TO_MOD_KEY}
+    )
+    assert response.status_code == 400
+    assert response.json()["code"] == "INVALID_REQUEST"
+    assert "Unknown event_type" in response.json()["message"]
+
+@pytest.mark.asyncio
+async def test_blocked_missing_blocking_reason_returns_400(client, product_for_moderation):
+    event = {
+        "idempotency_key": str(uuid4()),
+        "product_id": str(product_for_moderation.id),
+        "event_type": "BLOCKED",
+        "hard_block": False,
+        "field_reports": [],
+        "occurred_at": "2024-01-01T00:00:00Z"
+    }
+    response = await client.post(
+        "/api/v1/moderation/events",
+        json=event,
+        headers={"X-Service-Key": settings.B2B_TO_MOD_KEY}
+    )
+    assert response.status_code == 400
+    assert response.json()["code"] == "INVALID_REQUEST"
+    assert "blocking_reason_id is required" in response.json()["message"]

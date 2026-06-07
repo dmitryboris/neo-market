@@ -5,7 +5,10 @@ from datetime import datetime, timezone, timedelta
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.models import Product, ProductStatus, SKU, FieldReport, ProcessedModerationEvent
-from src.services.exceptions import ProductNotFound, InvalidModerationEvent
+from src.services.exceptions import (
+    ProductNotFound, IdempotencyKeyMissing, ProductIdMissing, EventTypeMissing,
+    InvalidModerationEvent, BlockingReasonIdMissing, FieldReportsMissing
+)
 from src.schemas.moderation import ModerationEventType
 
 async def apply_moderation_event(
@@ -18,6 +21,13 @@ async def apply_moderation_event(
     field_reports_data: list[dict],
 ) -> None:
     SENDER_SERVICE = "moderation"
+
+    if idempotency_key is None:
+        raise IdempotencyKeyMissing()
+    if product_id is None:
+        raise ProductIdMissing()
+    if event_type is None:
+        raise EventTypeMissing()
 
     stmt = select(ProcessedModerationEvent).where(
         ProcessedModerationEvent.sender_service == SENDER_SERVICE,
@@ -37,6 +47,12 @@ async def apply_moderation_event(
     product = result.scalar_one_or_none()
     if not product:
         raise ProductNotFound()
+    
+    if event_type == "BLOCKED":
+        if blocking_reason_id is None:
+            raise BlockingReasonIdMissing()
+        if field_reports_data is None:
+            raise FieldReportsMissing()
 
     if event_type == ModerationEventType.MODERATED:
         product.status = ProductStatus.MODERATED

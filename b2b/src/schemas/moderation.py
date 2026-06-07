@@ -14,10 +14,10 @@ class ModerationEventType(str, Enum):
 
 
 class ModerationEventRequest(BaseModel):
-    idempotency_key: UUID
-    product_id: UUID
-    event_type: ModerationEventType
-    occurred_at: datetime
+    idempotency_key: UUID | None = None
+    product_id: UUID | None = None
+    event_type: str | None = None
+    occurred_at: datetime | None = None
     moderator_id: UUID | None = None
     moderator_comment: str | None = None
     blocking_reason_id: UUID | None = None
