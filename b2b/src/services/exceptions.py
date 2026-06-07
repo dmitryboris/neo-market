@@ -36,7 +36,7 @@ class ProductNotFound(DomainException):
 
 
 class ProductHardBlocked(DomainException):
-    def __init__(self, message="Cannot add SKU to hard-blocked product"):
+    def __init__(self, message="Cannot change hard-blocked product"):
         super().__init__(code="FORBIDDEN", message=message, status_code=403)
 
 
@@ -94,6 +94,10 @@ class ProductAlreadyDeleted(DomainException):
     def __init__(self, message="Product already deleted"):
         super().__init__(code="INVALID_REQUEST", message=message, status_code=400)
 
+
+class InvalidModerationEvent(DomainException):
+    def __init__(self, message="Unknown event_type"):
+        super().__init__(code="INVALID_REQUEST", message=message, status_code=400)
 
 class CategoryParentNotFound(Exception):
     pass
