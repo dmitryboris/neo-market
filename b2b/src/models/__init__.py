@@ -11,3 +11,4 @@ from .invoice_item import InvoiceItem
 from .refresh_token import RefreshToken
 from .blocking_reason import BlockingReason
 from .field_report import FieldReport
+from .processed_event import ProcessedModerationEvent

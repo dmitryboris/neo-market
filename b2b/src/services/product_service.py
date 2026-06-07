@@ -192,6 +192,9 @@ async def delete_product(
 
     if product.deleted:
         raise ProductAlreadyDeleted()
+    
+    if product.status == ProductStatus.HARD_BLOCKED:
+        raise ProductHardBlocked("Cannot delete hard-blocked product") 
 
     product.deleted = True
     sku_ids = [sku.id for sku in product.skus]
