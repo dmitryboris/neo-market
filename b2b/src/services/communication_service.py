@@ -1,7 +1,7 @@
 from src.config import settings
 import httpx
 from uuid import UUID, uuid4
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.models import Product, ProductStatus, SKU, FieldReport, ProcessedModerationEvent
@@ -17,10 +17,22 @@ async def apply_moderation_event(
     blocking_reason_id: UUID | None,
     field_reports_data: list[dict],
 ) -> None:
-    existing = await session.get(ProcessedModerationEvent, idempotency_key)
-    if existing:
-        return
+    SENDER_SERVICE = "moderation"
 
+    stmt = select(ProcessedModerationEvent).where(
+        ProcessedModerationEvent.sender_service == SENDER_SERVICE,
+        ProcessedModerationEvent.idempotency_key == idempotency_key
+    )
+    result = await session.execute(stmt)
+    existing = result.scalar_one_or_none()
+    if existing:
+        age = datetime.now(timezone.utc) - existing.processed_at
+        if age < timedelta(hours=24):
+            return
+        else:
+            await session.delete(existing)
+            await session.flush()
+    
     result = await session.execute(select(Product).where(Product.id == product_id))
     product = result.scalar_one_or_none()
     if not product:
@@ -67,7 +79,11 @@ async def apply_moderation_event(
     else:
         raise InvalidModerationEvent()
 
-    session.add(ProcessedModerationEvent(idempotency_key=idempotency_key))
+    processed = ProcessedModerationEvent(
+        sender_service=SENDER_SERVICE,
+        idempotency_key=idempotency_key
+    )
+    session.add(processed)
     await session.commit()
 
 
