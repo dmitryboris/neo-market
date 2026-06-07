@@ -36,7 +36,7 @@ class ProductNotFound(DomainException):
 
 
 class ProductHardBlocked(DomainException):
-    def __init__(self, message="Cannot change hard-blocked product"):
+    def __init__(self, message="Cannot edit hard-blocked product"):
         super().__init__(code="FORBIDDEN", message=message, status_code=403)
 
 
