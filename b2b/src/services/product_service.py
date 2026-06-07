@@ -138,7 +138,7 @@ async def update_product(
         raise NotOwner()
 
     if product.status == ProductStatus.HARD_BLOCKED:
-        raise ProductHardBlocked()
+        raise ProductHardBlocked("Cannot edit hard-blocked product")
 
     if request.title is not None:
         if not request.title.strip():
@@ -194,7 +194,7 @@ async def delete_product(
         raise ProductAlreadyDeleted()
     
     if product.status == ProductStatus.HARD_BLOCKED:
-        raise ProductHardBlocked() 
+        raise ProductHardBlocked("Cannot delete hard-blocked product") 
 
     product.deleted = True
     sku_ids = [sku.id for sku in product.skus]
