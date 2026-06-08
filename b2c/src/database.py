@@ -1,8 +1,9 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import DateTime, func
+from sqlalchemy import DateTime, func, Uuid
 from datetime import datetime
 from src.config import settings
+import uuid
 
 engine = create_async_engine(settings.database_url, echo=True)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
@@ -19,6 +20,12 @@ class TimestampMixin:
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(),
         onupdate=func.now(), nullable=False
+    )
+
+
+class UUIDMixin:
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
 
 
