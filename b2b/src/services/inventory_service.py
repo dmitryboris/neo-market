@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.models import SKU, ReserveOperation, UnreserveOperation, Product
-from src.services.exceptions import DomainException, InsufficientStock
+from src.services.exceptions import SKUNotFound, InsufficientStock, DomainException
 from src.schemas.inventory import ReserveResponse, InventoryOrderResponse
 from src.services.communication_service import _send_b2c_event 
 
@@ -23,7 +23,7 @@ async def reserve_skus(
     skus = {sku.id: sku for sku in result.scalars().all()}
     if len(skus) != len(sku_ids):
         missing = set(sku_ids) - set(skus.keys())
-        raise DomainException(code="NOT_FOUND", message=f"SKU(s) {missing} not found", status_code=404)
+        raise SKUNotFound(f"SKU(s) {missing} not found")
 
     failed = []
     updates = []
@@ -77,7 +77,7 @@ async def unreserve_skus(
     skus = {sku.id: sku for sku in result.scalars().all()}
     if len(skus) != len(sku_ids):
         missing = set(sku_ids) - set(skus.keys())
-        raise DomainException(code="NOT_FOUND", message=f"SKU(s) {missing} not found", status_code=404)
+        raise SKUNotFound(f"SKU(s) {missing} not found")
 
     for item in items:
         sku = skus.get(item["sku_id"])
