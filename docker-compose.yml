@@ -4,33 +4,64 @@ services:
     container_name: b2b-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${B2B_DB_USER}
+      POSTGRES_PASSWORD: ${B2B_DB_PASSWORD}
+      POSTGRES_DB: ${B2B_DB_NAME}
     volumes:
       - b2b_pg_data:/var/lib/postgresql
     ports:
-      - "${DB_PORT}:5432"
+      - "${B2B_DB_PORT}:5432"
 
   b2b:
     build: ./b2b
     container_name: b2b-api
     restart: unless-stopped
     environment:
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME}
-      DB_PORT: ${DB_PORT}
-      DB_HOST: b2b_db
+      B2B_DB_USER: ${B2B_DB_USER}
+      B2B_DB_PASSWORD: ${B2B_DB_PASSWORD}
+      B2B_DB_NAME: ${B2B_DB_NAME}
+      B2B_DB_PORT: 5432
+      B2B_DB_HOST: b2b_db
       JWT_SECRET: ${JWT_SECRET}
       JWT_ALGORITHM: ${JWT_ALGORITHM}
-      MODERATION_URL: ${MODERATION_URL}
       B2B_TO_MOD_KEY: ${B2B_TO_MOD_KEY}
+      B2C_URL: http://b2c:8000
     depends_on:
       - b2b_db
     ports:
       - "8000:8000"
-#    command: sh -c "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000"
+
+  b2c_db:
+    image: postgres:18-alpine
+    container_name: b2c-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${B2C_DB_USER}
+      POSTGRES_PASSWORD: ${B2C_DB_PASSWORD}
+      POSTGRES_DB: ${B2C_DB_NAME}
+    volumes:
+      - b2c_pg_data:/var/lib/postgresql
+    ports:
+      - "${B2C_DB_PORT}:5432"
+
+  b2c:
+    build: ./b2c
+    container_name: b2c-api
+    restart: unless-stopped
+    environment:
+      B2C_DB_USER: ${B2C_DB_USER}
+      B2C_DB_PASSWORD: ${B2C_DB_PASSWORD}
+      B2C_DB_NAME: ${B2C_DB_NAME}
+      B2C_DB_PORT: 5432
+      B2C_DB_HOST: b2c_db
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: ${JWT_ALGORITHM}
+      B2B_URL: http://b2b:8000
+    depends_on:
+      - b2c_db
+    ports:
+      - "8001:8000"
 
 volumes:
   b2b_pg_data:
+  b2c_pg_data:
