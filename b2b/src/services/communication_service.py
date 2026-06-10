@@ -140,3 +140,23 @@ async def _send_b2c_event(product: Product, sku_ids: list[UUID], event_type: str
         except Exception as e:
             print(f"Failed to send B2C event: {e}")
 
+
+async def send_sku_out_of_stock_event(sku: SKU, event_type: str = "SKU_OUT_OF_STOCK") -> None:
+    """Отправляет событие SKU_OUT_OF_STOCK в B2C."""
+    url = f"{settings.B2C_URL}/api/v1/b2b/events"
+    headers = {"X-Service-Key": settings.B2B_TO_B2C_KEY}
+    payload = {
+        "event_type": event_type,
+        "idempotency_key": str(uuid4()),
+        "occurred_at": datetime.now(timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z'),
+        "payload": {
+            "sku_id": str(sku.id),
+            "product_id": str(sku.product_id),
+            "available_quantity": 0
+        }
+    }
+    async with httpx.AsyncClient(timeout=2.0) as client:
+        try:
+            await client.post(url, json=payload, headers=headers)
+        except Exception as e:
+            print(f"Failed to send SKU_OUT_OF_STOCK event: {e}")
