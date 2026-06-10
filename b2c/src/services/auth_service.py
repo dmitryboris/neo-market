@@ -13,6 +13,8 @@ from shared.exceptions import (
     InvalidCredentials, UserBlocked, EmailAlreadyExists,
     TokenInvalid, TokenExpired, TokenRevoked
 )
+from src.services.cart_service import merge_carts
+from uuid import UUID
 
 token_service = TokenService(
     secret=settings.JWT_SECRET,
@@ -67,7 +69,7 @@ async def register_buyer(request: BuyerRegisterRequest, session: AsyncSession) -
     )
 
 
-async def login_buyer(request: LoginRequest, session: AsyncSession) -> TokenResponse:
+async def login_buyer(request: LoginRequest, session: AsyncSession, x_session_id: str | None = None) -> TokenResponse:
     buyer = await get_buyer(request.email, session)
     if not buyer or not verify_password(request.password, buyer.password_hash):
         raise InvalidCredentials()
@@ -85,6 +87,10 @@ async def login_buyer(request: LoginRequest, session: AsyncSession) -> TokenResp
         expires_at=datetime.fromtimestamp(refresh_payload["exp"], tz=timezone.utc),
     )
     session.add(rt)
+    await session.flush()
+
+    if x_session_id:
+        await merge_carts(session, buyer.id, x_session_id)
     await session.commit()
 
     return TokenResponse(
@@ -164,3 +170,9 @@ async def logout_buyer(access_payload: dict, refresh_token_str: str, session: As
         )
         session.add(blacklist_entry)
     await session.commit()
+
+
+async def get_buyer_by_id(session: AsyncSession, buyer_id: UUID) -> Buyer | None:
+    stmt = select(Buyer).where(Buyer.id == buyer_id)
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()

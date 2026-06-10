@@ -28,9 +28,9 @@ async def register(
 async def login(
         request: LoginRequest,
         session: AsyncSession = Depends(get_session),
-        # x_session_id: str | None = Header(None, alias="X-Session-Id"),
+        x_session_id: str | None = Header(None, alias="X-Session-Id"),
 ):
-    return await login_buyer(request=request, session=session)
+    return await login_buyer(request=request, session=session, x_session_id=x_session_id)
 
 
 @auth_router.post("/refresh", response_model=TokenResponse)

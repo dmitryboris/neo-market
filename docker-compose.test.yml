@@ -8,7 +8,16 @@ services:
     ports:
       - "5433:5432"
 
-  tests:
+  b2c_db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: b2c
+    ports:
+      - "5434:5432"
+
+  tests_b2b:
     build:
       context: .
       dockerfile: b2b/Dockerfile.test
@@ -19,3 +28,15 @@ services:
     volumes:
       - ./b2b/src:/app/src
       - ./b2b/tests:/app/tests
+
+  tests_b2c:
+    build:
+      context: .
+      dockerfile: b2c/Dockerfile.test
+    env_file:
+      - .env.example
+    depends_on:
+      - b2c_db
+    volumes:
+      - ./b2c/src:/app/src
+      - ./b2c/tests:/app/tests
