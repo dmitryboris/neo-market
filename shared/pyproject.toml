@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shared"
+version = "0.1.0"
+description = "Shared code for NeoMarket"
+requires-python = ">=3.10"
+dependencies = [
+    "python-jose[cryptography]",
+    "passlib[bcrypt]",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["shared*"]

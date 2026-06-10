@@ -1,56 +1,83 @@
 from fastapi import Depends, HTTPException, status, Header
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
-from jose import JWTError
-from src.security import decode_token
 from src.models.seller import Seller
 from src.database import get_session
 from src.config import settings
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
-optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token", auto_error=False)
+from shared.exceptions import TokenInvalid, UserBlocked, Forbidden
+from shared.security import TokenService
+from shared.enums import UserRole
+
+
+token_service = TokenService(
+    secret=settings.JWT_SECRET,
+    algorithm=settings.JWT_ALGORITHM,
+    access_ttl_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
+    refresh_ttl_days=settings.REFRESH_TOKEN_EXPIRE_DAYS,
+)
+
+
+def get_token_service() -> TokenService:
+    return token_service
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token", auto_error=False)
+
+
+async def get_token_payload(
+        token: str = Depends(oauth2_scheme),
+        ts: TokenService = Depends(get_token_service),
+) -> dict:
+    if not token:
+        raise TokenInvalid(message="Missing access token")
+    return ts.decode_token(token)
+
 
 async def get_current_user_optional(
-    token: str | None = Depends(optional_oauth2_scheme),
-    session: AsyncSession = Depends(get_session),
+        token: str = Depends(oauth2_scheme),
+        session: AsyncSession = Depends(get_session),
+        ts: TokenService = Depends(get_token_service),
 ) -> Seller | None:
     if not token:
         return None
     try:
-        payload = decode_token(token)
+        payload = ts.decode_token(token)
         user_id = payload.get("sub")
         if user_id is None:
             return None
-    except JWTError:
+        user = await session.get(Seller, user_id)
+        if not user or not user.is_active:
+            return None
+        if payload.get("role") != user.role:
+            return None
+        return user
+    except (TokenInvalid, TokenExpired):
         return None
-    user = await session.get(Seller, user_id)
-    if not user or not user.is_active:
-        return None
-    return user
+
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    session: AsyncSession = Depends(get_session),
+        token: str = Depends(oauth2_scheme),
+        session: AsyncSession = Depends(get_session),
+        ts: TokenService = Depends(get_token_service),
 ) -> Seller:
-    try:
-        payload = decode_token(token)
-        user_id = payload.get("sub")
-        if user_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail={"code": "INVALID_TOKEN", "message": "Невалидный токен"},
-            )
-    except JWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": "INVALID_TOKEN", "message": "Невалидный токен"},
-        )
+    if not token:
+        raise TokenInvalid(message="Missing authorization token")
+
+    payload = ts.decode_token(token)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise TokenInvalid(message="Token missing 'sub' claim")
+
     user = await session.get(Seller, user_id)
-    if not user or not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": "UNAUTHORIZED", "message": "Пользователь не найден или заблокирован"},
-        )
+    if not user:
+        raise TokenInvalid()
+    if not user.is_active:
+        raise UserBlocked()
+
+    if user.role != UserRole.SELLER.value or payload.get("role") != user.role:
+        raise Forbidden(message="Access denied: seller role required")
+
     return user
 
 
@@ -66,14 +93,14 @@ def require_service_key(x_service_key: str | None = Header(default=None, alias="
 def require_b2c_key(x_service_key: str = Depends(require_service_key)) -> None:
     if x_service_key != settings.B2C_TO_B2B_KEY:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail={"code": "UNAUTHORIZED", "message": "Invalid service key"},
         )
-    
+
 
 def require_moderation_key(x_service_key: str = Depends(require_service_key)) -> None:
     if x_service_key != settings.B2B_TO_MOD_KEY:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail={"code": "UNAUTHORIZED", "message": "Invalid service key"}
         )

@@ -1,11 +1,9 @@
-from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_session
 from src.models import Seller
-from src.security import decode_token
-from src.dependencies import get_current_user
+from src.dependencies import get_current_user, get_token_payload
 from src.services.auth_service import register_seller, login_seller, logout_seller, get_token, refresh_token, get_seller
 from src.schemas.auth import RegisterResponse, RegisterRequest, LoginRequest, TokenResponse, RefreshRequest, \
     LogoutRequest
@@ -23,12 +21,6 @@ async def register(
         request: RegisterRequest,
         session: AsyncSession = Depends(get_session)
 ):
-    seller = await get_seller(request, session)
-    if seller:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={"code": "EMAIL_OR_INN_EXISTS", "message": "Email или ИНН уже зарегистрированы"},
-        )
     return await register_seller(request, session)
 
 
@@ -52,34 +44,7 @@ async def refresh(
         request: RefreshRequest,
         session: AsyncSession = Depends(get_session)
 ):
-    try:
-        payload = decode_token(request.refresh_token)
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": "INVALID_TOKEN", "message": "Невалидный refresh токен"},
-        )
-    jti = payload.get("jti")
-    if not jti:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": "INVALID_TOKEN", "message": "Нет jti в refresh токене"},
-        )
-
-    rt = await get_token(payload, session)
-
-    if not rt or rt.revoked:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": "TOKEN_REVOKED", "message": "Refresh токен уже использован или отозван"},
-        )
-    if rt.expires_at < datetime.now(timezone.utc):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": "TOKEN_EXPIRED", "message": "Рефреш токен истёк"},
-        )
-
-    return await refresh_token(rt, payload, session)
+    return await refresh_token(request.refresh_token, session)
 
 
 @auth_router.post(
@@ -88,23 +53,11 @@ async def refresh(
 )
 async def logout(
         request: LogoutRequest,
-        current_user: Seller = Depends(get_current_user),
+        access_payload: dict = Depends(get_token_payload),
         session: AsyncSession = Depends(get_session)
 ):
-    try:
-        payload = decode_token(request.refresh_token)
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": "INVALID_TOKEN", "message": "Невалидный refresh токен"},
-        )
-    if payload.get("sub") != str(current_user.id):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": "INVALID_TOKEN", "message": "Refresh токен не принадлежит текущему пользователю"},
-        )
-
-    return await logout_seller(payload, session)
+    await logout_seller(access_payload, request.refresh_token, session)
+    return None
 
 
 @auth_router.post(

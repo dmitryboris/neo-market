@@ -2,7 +2,7 @@ from http import HTTPStatus
 from fastapi import Request
 from fastapi.exceptions import HTTPException, RequestValidationError
 from fastapi.responses import JSONResponse
-from src.services.exceptions import DomainException
+from .exceptions import DomainException
 
 
 async def http_exception_handler(request: Request, exc: HTTPException):

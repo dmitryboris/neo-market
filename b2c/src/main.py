@@ -6,12 +6,12 @@ from alembic.config import Config
 from alembic import command
 import uvicorn
 
-from src.exception_handlers import (
+from src.routes import routers
+from shared.exception_handlers import (
     http_exception_handler, validation_exception_handler,
     domain_exception_handler, unhandled_exception_handler
 )
-from src.services.exceptions import DomainException
-from src.routes import routers
+from shared.exceptions import DomainException
 
 
 def run_migrations():

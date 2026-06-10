@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from src.models.seller import Seller
 from src.schemas.seller import SellerCreate, SellerUpdate
-from src.security import hash_password
+from shared.security import hash_password
 
 
 def normalize_email(email: str) -> str:

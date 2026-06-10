@@ -1,8 +1,4 @@
-class DomainException(Exception):
-    def __init__(self, code: str, message: str, status_code: int = 400):
-        self.code = code
-        self.message = message
-        self.status_code = status_code
+from shared.exceptions import DomainException
 
 
 class ProductTitleEmpty(DomainException):
@@ -99,30 +95,37 @@ class InvalidModerationEvent(DomainException):
     def __init__(self, message="Unknown event_type"):
         super().__init__(code="INVALID_REQUEST", message=message, status_code=400)
 
+
 class IdempotencyKeyMissing(DomainException):
     def __init__(self, message="idempotency_key is required"):
         super().__init__(code="INVALID_REQUEST", message=message, status_code=400)
+
 
 class ProductIdMissing(DomainException):
     def __init__(self, message="product_id is required"):
         super().__init__(code="INVALID_REQUEST", message=message, status_code=400)
 
+
 class EventTypeMissing(DomainException):
     def __init__(self, message="event_type is required"):
         super().__init__(code="INVALID_REQUEST", message=message, status_code=400)
+
 
 class OccurredAtMissing(DomainException):
     def __init__(self, message="occurred_at is required"):
         super().__init__(code="INVALID_REQUEST", message=message, status_code=400)
 
+
 class BlockingReasonIdMissing(DomainException):
     def __init__(self, message="blocking_reason_id is required for BLOCKED event"):
         super().__init__(code="INVALID_REQUEST", message=message, status_code=400)
 
+
 class FieldReportsMissing(DomainException):
     def __init__(self, message="field_reports is required for BLOCKED event"):
         super().__init__(code="INVALID_REQUEST", message=message, status_code=400)
-    
+
+
 class CategoryParentNotFound(Exception):
     pass
 

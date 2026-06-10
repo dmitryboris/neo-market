@@ -6,3 +6,4 @@ from .order import Order
 from .order_item import OrderItem
 from .payment_method import PaymentMethod
 from .refresh_token import RefreshToken
+from .refresh_blacklist import RefreshBlacklist

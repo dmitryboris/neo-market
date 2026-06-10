@@ -2,11 +2,19 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY b2b/requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY shared /tmp/shared
+
+RUN pip install --no-cache-dir /tmp/shared
+
+COPY b2b/src /app/src
+
+COPY b2b/migrations /app/migrations
+
+COPY b2b/alembic.ini /app/alembic.ini
 
 EXPOSE 8000
 
