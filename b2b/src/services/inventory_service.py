@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.models import SKU, ReserveOperation, UnreserveOperation, Product
 from src.services.exceptions import SKUNotFound, InsufficientStock, DomainException
 from src.schemas.inventory import ReserveResponse, InventoryOrderResponse
-from src.services.communication_service import _send_b2c_event 
+from src.services.communication_service import send_sku_out_of_stock_event 
 
 async def reserve_skus(
     session: AsyncSession,
@@ -57,7 +57,7 @@ async def reserve_skus(
     for sku in out_of_stock_skus:
         product = await session.get(Product, sku.product_id)
         if product:
-            await _send_b2c_event(product, [sku.id], event_type="SKU_OUT_OF_STOCK")
+            await send_sku_out_of_stock_event(sku)
 
     return response
 
