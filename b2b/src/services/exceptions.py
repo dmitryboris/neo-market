@@ -125,7 +125,18 @@ class FieldReportsMissing(DomainException):
     def __init__(self, message="field_reports is required for BLOCKED event"):
         super().__init__(code="INVALID_REQUEST", message=message, status_code=400)
 
+class InsufficientStock(DomainException):
+    def __init__(self, failed_items: list[dict]):
+        super().__init__(code="INSUFFICIENT_STOCK", message="Insufficient stock for one or more SKUs",
+            status_code=409, details={"failed_items": failed_items}
+        )
 
+class OutOfStock(DomainException):
+    def __init__(self, failed_items: list[dict]):
+        super().__init__(code="OUT_OF_STOCK", message="One or more SKUs are out of stock",
+            status_code=409, details={"failed_items": failed_items}
+        )
+    
 class CategoryParentNotFound(Exception):
     pass
 

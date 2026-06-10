@@ -7,6 +7,7 @@ from .product_router import product_router
 from .sku_router import sku_router
 from .public_router import public_router
 from .moderation_router import moderation_router
+from .inventory_router import inventory_router
 
 routers = [
     auth_router,
@@ -17,5 +18,6 @@ routers = [
     product_router,
     sku_router,
     public_router,
-    moderation_router
+    moderation_router,
+    inventory_router,
 ]
