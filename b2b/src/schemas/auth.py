@@ -41,6 +41,7 @@ class TokenResponse(BaseModel):
     token_type: str = "Bearer"
     expires_in: int
 
+
 class RegisterResponse(SellerResponse):
     access_token: str
     refresh_token: str

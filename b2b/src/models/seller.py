@@ -1,11 +1,11 @@
 from typing import TYPE_CHECKING
 
 import uuid
-from sqlalchemy import String, Boolean, DateTime, func
+from sqlalchemy import String, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from src.database import Base, TimestampMixin
-from datetime import datetime
+from shared.enums import UserRole
 
 if TYPE_CHECKING:
     from .product import Product
@@ -27,7 +27,7 @@ class Seller(Base, TimestampMixin):
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[str] = mapped_column(String(20), nullable=False, default="seller")
+    role: Mapped[UserRole] = mapped_column(String(20), nullable=False, default=UserRole.SELLER)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     company_name: Mapped[str] = mapped_column(String(255), nullable=False)
     inn: Mapped[str] = mapped_column(String(12), nullable=False, unique=True)

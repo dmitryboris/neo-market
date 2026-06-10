@@ -9,6 +9,7 @@ from .sku_image import SKUImage
 from .invoice import Invoice, InvoiceStatus
 from .invoice_item import InvoiceItem
 from .refresh_token import RefreshToken
+from .refresh_blacklist import RefreshBlacklist
 from .blocking_reason import BlockingReason
 from .field_report import FieldReport
 from .processed_event import ProcessedModerationEvent
