@@ -1,71 +1,166 @@
-import jwt
-from sqlalchemy import select
+# b2c/src/services/auth_service.py
+from datetime import datetime, timezone, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from src.models import Buyer, RefreshToken, RefreshBlacklist
 from src.config import settings
-from src.models.buyer import Buyer
+from src.schemas.auth import (
+    BuyerRegisterRequest, LoginRequest,TokenResponse
+)
+from shared.security import TokenService, hash_password, verify_password
+from shared.enums import UserRole
+from shared.exceptions import (
+    InvalidCredentials, UserBlocked, EmailAlreadyExists,
+    TokenInvalid, TokenExpired, TokenRevoked
+)
 
-from src.securiry import create_access_token, hash_password, create_refresh_token, verify_password
+token_service = TokenService(
+    secret=settings.JWT_SECRET,
+    algorithm=settings.JWT_ALGORITHM,
+    access_ttl_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
+    refresh_ttl_days=settings.REFRESH_TOKEN_EXPIRE_DAYS,
+)
 
 
-async def register_buyer(session: AsyncSession, request) -> dict:
-    stmt = select(Buyer).where(Buyer.email == request.email)
+async def get_buyer(email: str, session: AsyncSession) -> Buyer | None:
+    stmt = select(Buyer).where(Buyer.email == email)
     result = await session.execute(stmt)
-    if result.scalar_one_or_none():
-        raise EmailAlreadyRegistered()
+    return result.scalars().first()
+
+
+async def register_buyer(request: BuyerRegisterRequest, session: AsyncSession) -> TokenResponse:
+    existing = await get_buyer(request.email, session)
+    if existing:
+        raise EmailAlreadyExists()
 
     buyer = Buyer(
         email=request.email,
+        password_hash=hash_password(request.password),
+        role=UserRole.BUYER.value,
         first_name=request.first_name,
         last_name=request.last_name,
-        password_hash=hash_password(request.password),
+        phone=request.phone,
+        is_active=True,
     )
     session.add(buyer)
+    await session.flush()
+
+    access_token = token_service.create_access_token(str(buyer.id), buyer.role)
+    refresh_token = token_service.create_refresh_token(str(buyer.id), buyer.role)
+
+    refresh_payload = token_service.decode_token(refresh_token)
+    rt = RefreshToken(
+        jti=refresh_payload["jti"],
+        buyer_id=buyer.id,
+        issued_at=datetime.fromtimestamp(refresh_payload["iat"], tz=timezone.utc),
+        expires_at=datetime.fromtimestamp(refresh_payload["exp"], tz=timezone.utc),
+    )
+    session.add(rt)
     await session.commit()
-    await session.refresh(buyer)
 
-    access_token = create_access_token(str(buyer.id))
-    refresh_token = create_refresh_token(str(buyer.id))
-    return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer"
-    }
+    return TokenResponse(
+        user_id=str(buyer.id),
+        access_token=access_token,
+        refresh_token=refresh_token,
+        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        token_type="Bearer",
+    )
 
 
-async def login_buyer(session: AsyncSession, request) -> dict:
-    stmt = select(Buyer).where(Buyer.email == request.email)
-    result = await session.execute(stmt)
-    buyer = result.scalar_one_or_none()
+async def login_buyer(request: LoginRequest, session: AsyncSession) -> TokenResponse:
+    buyer = await get_buyer(request.email, session)
     if not buyer or not verify_password(request.password, buyer.password_hash):
         raise InvalidCredentials()
-
     if not buyer.is_active:
-        raise InactiveBuyer()
+        raise UserBlocked()
 
-    access_token = create_access_token(str(buyer.id))
-    refresh_token = create_refresh_token(str(buyer.id))
-    return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer"
-    }
+    access_token = token_service.create_access_token(str(buyer.id), buyer.role)
+    refresh_token = token_service.create_refresh_token(str(buyer.id), buyer.role)
+
+    refresh_payload = token_service.decode_token(refresh_token)
+    rt = RefreshToken(
+        jti=refresh_payload["jti"],
+        buyer_id=buyer.id,
+        issued_at=datetime.fromtimestamp(refresh_payload["iat"], tz=timezone.utc),
+        expires_at=datetime.fromtimestamp(refresh_payload["exp"], tz=timezone.utc),
+    )
+    session.add(rt)
+    await session.commit()
+
+    return TokenResponse(
+        user_id=str(buyer.id),
+        access_token=access_token,
+        refresh_token=refresh_token,
+        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
 
 
-async def refresh_access_token(refresh_token: str) -> dict:
-    try:
-        payload = jwt.decode(refresh_token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
-        if payload.get("type") != "refresh":
-            raise jwt.InvalidTokenError
-        buyer_id = payload["sub"]
+async def refresh_token_pair(refresh_token_str: str, session: AsyncSession) -> TokenResponse:
+    payload = token_service.decode_token(refresh_token_str)
+    jti = payload.get("jti")
+    if not jti:
+        raise TokenInvalid(message="Refresh token missing jti")
 
-        new_access = create_access_token(buyer_id)
-        new_refresh = create_refresh_token(buyer_id)
-        return {
-            "access_token": new_access,
-            "refresh_token": new_refresh,
-            "token_type": "bearer"
-        }
-    except jwt.ExpiredSignatureError:
-        raise InvalidCredentials("Refresh token expired")
-    except jwt.InvalidTokenError:
-        raise InvalidCredentials("Invalid refresh token")
+    blacklist_stmt = select(RefreshBlacklist).where(RefreshBlacklist.jti == jti)
+    blacklist_result = await session.execute(blacklist_stmt)
+    if blacklist_result.scalar_one_or_none():
+        raise TokenRevoked()
+
+    rt_stmt = select(RefreshToken).where(RefreshToken.jti == jti)
+    rt_result = await session.execute(rt_stmt)
+    rt = rt_result.scalar_one_or_none()
+    if not rt:
+        raise TokenRevoked()
+    if rt.expires_at < datetime.now(timezone.utc):
+        raise TokenExpired()
+
+    user_id = str(rt.buyer_id)
+    role = payload.get("role")
+    new_access = token_service.create_access_token(user_id, role)
+    new_refresh = token_service.create_refresh_token(user_id, role)
+
+    blacklist_entry = RefreshBlacklist(jti=jti, expires_at=rt.expires_at)
+    session.add(blacklist_entry)
+    await session.delete(rt)
+
+    new_payload = token_service.decode_token(new_refresh)
+    new_rt = RefreshToken(
+        jti=new_payload["jti"],
+        buyer_id=rt.buyer_id,
+        issued_at=datetime.fromtimestamp(new_payload["iat"], tz=timezone.utc),
+        expires_at=datetime.fromtimestamp(new_payload["exp"], tz=timezone.utc),
+    )
+    session.add(new_rt)
+    await session.commit()
+
+    return TokenResponse(
+        user_id=user_id,
+        access_token=new_access,
+        refresh_token=new_refresh,
+        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
+
+
+async def logout_buyer(access_payload: dict, refresh_token_str: str, session: AsyncSession) -> None:
+    refresh_payload = token_service.decode_token(refresh_token_str)
+    if refresh_payload.get("sub") != access_payload.get("sub"):
+        raise TokenInvalid(message="Refresh token does not match current user")
+
+    jti = refresh_payload.get("jti")
+    if not jti:
+        raise TokenInvalid(message="Refresh token missing jti")
+
+    rt_stmt = select(RefreshToken).where(RefreshToken.jti == jti)
+    rt_result = await session.execute(rt_stmt)
+    rt = rt_result.scalar_one_or_none()
+    if rt:
+        blacklist_entry = RefreshBlacklist(jti=jti, expires_at=rt.expires_at)
+        session.add(blacklist_entry)
+        await session.delete(rt)
+    else:
+        blacklist_entry = RefreshBlacklist(
+            jti=jti,
+            expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        )
+        session.add(blacklist_entry)
+    await session.commit()

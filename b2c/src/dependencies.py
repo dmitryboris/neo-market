@@ -24,6 +24,15 @@ def get_token_service() -> TokenService:
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
+async def get_token_payload(
+        token: str = Depends(oauth2_scheme),
+        ts: TokenService = Depends(get_token_service),
+) -> dict:
+    if not token:
+        raise TokenInvalid(message="Missing access token")
+    return ts.decode_token(token)
+
+
 async def get_current_user(
         token: str = Depends(oauth2_scheme),
         session: AsyncSession = Depends(get_session),

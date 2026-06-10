@@ -2,6 +2,7 @@ from http import HTTPStatus
 from fastapi import Request
 from fastapi.exceptions import HTTPException, RequestValidationError
 from fastapi.responses import JSONResponse
+import traceback
 from .exceptions import DomainException
 
 
@@ -32,12 +33,13 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 async def domain_exception_handler(request: Request, exc: DomainException):
     return JSONResponse(
         status_code=exc.status_code,
-        content={"code": exc.code, "message": exc.message}
+        content={"code": exc.code, "message": exc.message, "details": exc.details}
     )
 
 
 async def unhandled_exception_handler(request: Request, exc: Exception):
+    traceback.print_exc()
     return JSONResponse(
         status_code=500,
-        content={"code": "INTERNAL_SERVER_ERROR", "message": "INTERNAL_SERVER_ERROR"}
+        content={"code": "INTERNAL_SERVER_ERROR", "message": "INTERNAL_SERVER_ERROR", "detail": str(exc)}
     )
