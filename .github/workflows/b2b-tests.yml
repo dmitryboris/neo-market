@@ -53,6 +53,7 @@ jobs:
         run: |
           cp .env.example b2b/.env
           sed -i 's/DB_HOST=.*/DB_HOST=localhost/' b2b/.env
+          pip install ./shared
 
       - name: Run ${{ matrix.test-file }}
         working-directory: b2b
