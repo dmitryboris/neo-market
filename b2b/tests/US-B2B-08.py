@@ -92,44 +92,6 @@ async def test_idempotent_reserve_returns_200_without_double_deduction(client, s
     assert skus[0].active_quantity == 9
     assert skus[0].reserved_quantity == 1
 
-# @pytest.mark.asyncio
-# async def test_sku_out_of_stock_event_emitted(client, skus, db_session):
-#     skus[0].active_quantity = 1
-#     await db_session.commit()
-#     with patch("src.services.inventory_service.send_sku_out_of_stock_event") as mock_send:
-#         payload = {
-#             "idempotency_key": str(uuid4()),
-#             "order_id": str(uuid4()),
-#             "items": [{"sku_id": str(skus[0].id), "quantity": 1}]
-#         }
-#         response = await client.post(
-#             "/api/v1/inventory/reserve",
-#             json=payload,
-#             headers={"X-Service-Key": settings.B2B_TO_B2C_KEY}
-#         )
-#         assert response.status_code == 200
-#         mock_send.assert_called_once_with(skus[0])
-
-
-# @pytest.mark.asyncio
-# async def test_sku_out_of_stock_event_format(skus, db_session):
-#     with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
-#         await send_sku_out_of_stock_event(skus[0])
-#         mock_post.assert_called_once()
-#         call_args = mock_post.call_args
-#         url = call_args[0][0]
-#         headers = call_args[1]["headers"]
-#         json_body = call_args[1]["json"]
-
-#         assert url == f"{settings.B2C_URL}/api/v1/b2b/events"
-#         assert headers["X-Service-Key"] == settings.B2B_TO_B2C_KEY
-#         assert json_body["event_type"] == "SKU_OUT_OF_STOCK"
-#         assert "idempotency_key" in json_body
-#         assert json_body["occurred_at"] is not None
-#         assert json_body["payload"]["sku_id"] == str(skus[0].id)
-#         assert json_body["payload"]["product_id"] == str(skus[0].product_id)
-#         assert json_body["payload"]["available_quantity"] == 0
-
 
 @pytest.mark.asyncio
 async def test_sku_out_of_stock_event_emitted(httpx_mock, client, skus, db_session):
