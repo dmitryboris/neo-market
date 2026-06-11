@@ -1,25 +1,41 @@
-# Neomarket  
-## Дока на http://localhost:8000/docs  
-  
-## Запуск  
+# Neomarket
+
+### B2B Docs http://localhost:8000/docs  
+### B2C Docs http://localhost:8001/docs  
+
+## Build and run 
 ``` 
-docker compose up -d
+docker compose up -d --build
 ```  
 
-## Остановка  
+## Stop  
 ```  
 docker compose down -v
 ```  
   
-## Логи  
+## Logs 
 ```
 docker compose logs b2b
 ```  
   
-## Запуск тестов  
+## Tests
+
+### Build
 ``` 
-docker compose -f docker-compose.test.yml run --rm tests pytest --asyncio-mode=auto tests -v
+docker compose -f docker-compose.test.yml build
 ```
+
+### B2B
+```
+docker compose -f docker-compose.test.yml run --rm tests_b2b pytest --asyncio-mode=auto tests -v
+```
+
+### B2C
+```
+docker compose -f docker-compose.test.yml run --rm tests_b2c pytest --asyncio-mode=auto tests -v
+```
+
+### Stop
 ```
 docker compose -f docker-compose.test.yml down
 ```

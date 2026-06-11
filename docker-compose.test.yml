@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: b2b
     ports:
-      - "5433:5432"
+      - "5432:5432"
 
   b2c_db:
     image: postgres:18-alpine
@@ -15,7 +15,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: b2c
     ports:
-      - "5434:5432"
+      - "5433:5432"
 
   tests_b2b:
     build:
@@ -35,6 +35,8 @@ services:
       dockerfile: b2c/Dockerfile.test
     env_file:
       - .env.example
+    environment:
+      B2C_DB_PORT: 5432
     depends_on:
       - b2c_db
     volumes:
