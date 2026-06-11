@@ -8,10 +8,8 @@ from src.schemas.auth import (
 from src.services.auth_service import (
     register_buyer, login_buyer, refresh_token_pair, logout_buyer
 )
-from src.dependencies import get_current_user, get_token_payload
-from src.models.buyer import Buyer
+from src.dependencies import get_token_payload
 
-from shared.exceptions import DomainException
 
 auth_router = APIRouter(prefix="/auth", tags=["Auth"])
 

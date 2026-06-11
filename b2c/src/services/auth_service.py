@@ -13,7 +13,7 @@ from shared.exceptions import (
     InvalidCredentials, UserBlocked, EmailAlreadyExists,
     TokenInvalid, TokenExpired, TokenRevoked
 )
-from src.services.cart_service import merge_carts
+from src.services.cart_service import merge_carts_service
 from uuid import UUID
 
 token_service = TokenService(
@@ -90,7 +90,7 @@ async def login_buyer(request: LoginRequest, session: AsyncSession, x_session_id
     await session.flush()
 
     if x_session_id:
-        await merge_carts(session, buyer.id, x_session_id)
+        await merge_carts_service(session, buyer.id, x_session_id)
     await session.commit()
 
     return TokenResponse(

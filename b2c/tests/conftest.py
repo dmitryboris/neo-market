@@ -3,11 +3,12 @@ from uuid import uuid4
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.pool import NullPool
 from httpx import AsyncClient, ASGITransport
-
 from src.main import app
 from src.database import get_session, Base, settings
-from src.dependencies import get_current_user
+from src.dependencies import get_current_user, get_current_user_optional
 from src.models import Buyer
+from unittest.mock import AsyncMock, patch
+from src.services.auth_service import token_service
 
 TEST_BUYER_ID = uuid4()
 TEST_BUYER = Buyer(
@@ -21,6 +22,8 @@ TEST_BUYER = Buyer(
     is_active=True,
 )
 
+def create_access_token(user_id: str, role: str = "BUYER") -> str:
+    return token_service.create_access_token(user_id, role)
 
 @pytest.fixture(scope="session")
 async def test_engine():
@@ -58,7 +61,7 @@ def override_dependencies(db_session):
 
     app.dependency_overrides[get_session] = _get_session
     app.dependency_overrides[get_current_user] = lambda: TEST_BUYER
-    # app.dependency_overrides[get_current_buyer_optional] = lambda: TEST_BUYER
+    app.dependency_overrides[get_current_user_optional] = lambda: TEST_BUYER
     yield
     app.dependency_overrides.clear()
 
@@ -68,3 +71,17 @@ async def client():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
+
+
+@pytest.fixture
+async def auth_client(client, db_session):
+    buyer = TEST_BUYER
+    token = create_access_token(str(buyer.id), "BUYER")
+    client.headers["Authorization"] = f"Bearer {token}"
+    return client, buyer
+
+@pytest.fixture
+def mock_b2b():
+    with patch("src.services.cart_service.get_sku", new_callable=AsyncMock) as mock_sku, \
+         patch("src.services.cart_service.batch_get_products", new_callable=AsyncMock) as mock_batch:
+        yield {"sku": mock_sku, "batch": mock_batch}

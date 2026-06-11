@@ -61,7 +61,6 @@ async def get_current_user(
     return user
 
 def get_session_id(x_session_id: Optional[str] = Header(None, alias="X-Session-Id")) -> Optional[str]:
-    # Не генерируем сами — пусть фронт присылает.
     return x_session_id
 
 
