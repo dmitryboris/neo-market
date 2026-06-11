@@ -12,6 +12,7 @@ jobs:
       matrix:
         test-file:
           - US-B2C-AUTH.py
+          - US-B2C-CAT-01.py
 
     services:
       postgres:
