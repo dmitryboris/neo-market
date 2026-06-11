@@ -1,4 +1,3 @@
-# b2c/src/services/auth_service.py
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
