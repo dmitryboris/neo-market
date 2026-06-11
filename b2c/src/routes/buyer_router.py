@@ -6,7 +6,7 @@ from src.models.buyer import Buyer
 from src.schemas.buyer import BuyerResponse, BuyerUpdateRequest
 from src.services import buyer_service
 
-buyer_router = APIRouter(prefix="/api/v1/buyers", tags=["Buyer"])
+buyer_router = APIRouter(prefix="/buyers", tags=["Buyer"])
 
 
 @buyer_router.get("/me", response_model=BuyerResponse)
