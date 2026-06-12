@@ -2,11 +2,14 @@ import pytest
 from uuid import uuid4
 from src.models import Cart, CartItem
 from src.services.exceptions import SkuNotFound
-from src.services.cart_service import merge_carts_service, get_or_create_cart
+from src.services.cart_service import merge_carts_service, get_or_create_cart, add_cart_item_service
 from src.models import CartItem as CartItemModel
 from src.models import Buyer
 from src.services.auth_service import hash_password
 from sqlalchemy import select
+from fastapi import HTTPException
+from unittest.mock import patch
+
 
 @pytest.mark.asyncio
 async def test_add_sku_increments_quantity_if_already_in_cart(auth_client, mock_b2b):
@@ -435,3 +438,24 @@ async def test_merge_carts_service(db_session):
     
     guest_cart_check = await db_session.get(Cart, guest_cart.id)
     assert guest_cart_check is None
+
+
+@pytest.mark.asyncio
+async def test_b2b_unavailable_returns_503(client, auth_client, db_session):
+    client, buyer = auth_client
+    from src.models import Cart, CartItem
+    cart = Cart(user_id=buyer.id)
+    db_session.add(cart)
+    await db_session.flush()
+    sku_id = uuid4()
+    product_id = uuid4()
+    cart_item = CartItem(cart_id=cart.id, sku_id=sku_id, product_id=product_id, quantity=1)
+    db_session.add(cart_item)
+    await db_session.commit()
+
+    with patch("src.services.b2b_client.batch_get_products", side_effect=HTTPException(
+        status_code=503, detail={"code": "SERVICE_UNAVAILABLE", "message": "B2B service is unavailable"}
+    )):
+        response = await client.get("/api/v1/cart")
+        assert response.status_code == 503
+        assert response.json()["code"] == "SERVICE_UNAVAILABLE"
