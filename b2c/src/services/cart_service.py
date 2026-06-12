@@ -274,6 +274,7 @@ async def merge_carts_service(
                 quantity=guest_item.quantity,
             )
             session.add(new_item)
+    await session.flush()
     await session.execute(delete(CartItemModel).where(CartItemModel.cart_id == guest_cart.id))
     await session.execute(delete(Cart).where(Cart.id == guest_cart.id))
     await session.flush()

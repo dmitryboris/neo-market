@@ -1,10 +1,12 @@
 import pytest
 from uuid import uuid4
-from unittest.mock import patch
-from httpx import AsyncClient
-from src.models import Buyer, Cart, CartItem
-from src.services.cart_service import get_sku, batch_get_products
+from src.models import Cart, CartItem
 from src.services.exceptions import SkuNotFound
+from src.services.cart_service import merge_carts_service, get_or_create_cart
+from src.models import CartItem as CartItemModel
+from src.models import Buyer
+from src.services.auth_service import hash_password
+from sqlalchemy import select
 
 @pytest.mark.asyncio
 async def test_add_sku_increments_quantity_if_already_in_cart(auth_client, mock_b2b):
@@ -392,31 +394,44 @@ async def test_validation_all_reasons(auth_client, db_session, mock_b2b):
     assert "PRODUCT_DELETED" in issues
     assert "QUANTITY_REDUCED" in issues
 
-# @pytest.mark.asyncio
-# async def test_guest_cart_merged_on_login(client, db_session, mock_b2b):
-#     session_id = str(uuid4())
-#     client.headers["X-Session-Id"] = session_id
-#     sku_id = uuid4()
-#     mock_b2b["check"].return_value = {"product_id": uuid4(), "active_quantity": 10, "price": 1000, "name": "Test"}
-#     await client.post("/api/v1/cart/items", json={"sku_id": str(sku_id), "quantity": 3})
-#     from src.models import Buyer
-#     buyer = Buyer(
-#         id=uuid4(),
-#         email="test_buyer@example.com",
-#         password_hash="fake_hash",
-#         first_name="Test",
-#         is_active=True,
-#     )
-#     db_session.add(buyer)
-#     await db_session.commit()
-#     login_data = {"email": "test_buyer@example.com", "password": "12345678"}
-#     with patch("src.routes.auth.verify_password", return_value=True):
-#         resp_login = await client.post("/api/v1/auth/login", json=login_data, headers={"X-Session-Id": session_id})
-#     assert resp_login.status_code == 200
-#     token = resp_login.json()["access_token"]
-#     client.headers["Authorization"] = f"Bearer {token}"
-#     del client.headers["X-Session-Id"]
-#     cart_resp = await client.get("/api/v1/cart")
-#     data = cart_resp.json()
-#     assert len(data["items"]) == 1
-#     assert data["items"][0]["quantity"] == 3
+@pytest.mark.asyncio
+async def test_merge_carts_service(db_session):
+    buyer = Buyer(
+        id=uuid4(),
+        email="merge_test@example.com",
+        password_hash=hash_password("12345678"),
+        first_name="Merge",
+        is_active=True,
+    )
+    db_session.add(buyer)
+    await db_session.commit()
+    user_id = buyer.id
+
+    session_id = str(uuid4())
+    
+    guest_cart = await get_or_create_cart(db_session, session_id=session_id)
+    product_id1 = uuid4()
+    product_id2 = uuid4()
+    sku_guest_only = uuid4()
+    sku_conflict = uuid4()
+    guest_item1 = CartItemModel(cart_id=guest_cart.id, sku_id=sku_guest_only, product_id=product_id1, quantity=3)
+    guest_item2 = CartItemModel(cart_id=guest_cart.id, sku_id=sku_conflict, product_id=product_id2, quantity=5)
+    db_session.add_all([guest_item1, guest_item2])
+    await db_session.commit()
+    
+    user_cart = await get_or_create_cart(db_session, user_id=user_id)
+    user_item = CartItemModel(cart_id=user_cart.id, sku_id=sku_conflict, product_id=product_id2, quantity=2)
+    db_session.add(user_item)
+    await db_session.commit()
+    
+    merged_cart = await merge_carts_service(db_session, user_id, session_id)
+    
+    items = await db_session.execute(select(CartItemModel).where(CartItemModel.cart_id == user_cart.id))
+    items_list = items.scalars().all()
+    assert len(items_list) == 2
+    by_sku = {item.sku_id: item.quantity for item in items_list}
+    assert by_sku[sku_guest_only] == 3
+    assert by_sku[sku_conflict] == 5
+    
+    guest_cart_check = await db_session.get(Cart, guest_cart.id)
+    assert guest_cart_check is None
