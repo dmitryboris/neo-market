@@ -1,9 +1,12 @@
-from fastapi import Depends
+from fastapi import Depends, Header
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_session
 from src.models.buyer import Buyer
 from src.config import settings
+from typing import Optional
+from uuid import UUID
+from src.services.auth_service import get_buyer_by_id
 
 from shared.exceptions import TokenInvalid, UserBlocked, Forbidden
 from shared.security import TokenService
@@ -21,7 +24,7 @@ def get_token_service() -> TokenService:
     return token_service
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 
 async def get_token_payload(
@@ -56,3 +59,23 @@ async def get_current_user(
         raise Forbidden(message="Access denied: buyer role required")
 
     return user
+
+def get_session_id(x_session_id: Optional[str] = Header(None, alias="X-Session-Id")) -> Optional[str]:
+    return x_session_id
+
+
+async def get_current_user_optional(
+    session: AsyncSession = Depends(get_session),
+    token: Optional[str] = Depends(oauth2_scheme),
+) -> Optional[Buyer]:
+    if not token:
+        return None
+    try:
+        payload = token_service.decode_token(token)
+        user_id = payload.get("sub")
+        if not user_id:
+            return None
+        buyer = await get_buyer_by_id(session, UUID(user_id))
+        return buyer
+    except Exception:
+        return None

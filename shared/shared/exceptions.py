@@ -41,3 +41,4 @@ class EmailAlreadyExists(DomainException):
 class Forbidden(DomainException):
     def __init__(self, code: str = "FORBIDDEN", message: str = "Forbidden", status_code: int = 403):
         super().__init__(code=code, message=message, status_code=status_code)
+        
