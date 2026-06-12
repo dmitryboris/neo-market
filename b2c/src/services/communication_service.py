@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from src.config import settings
 import httpx
-from src.services.exceptions import ServiceUnavailable, InvalidSort
+from src.services.exceptions import CatalogUnavailable, InvalidSort
 
 
 
@@ -20,4 +20,4 @@ async def _request_b2b(method: str, path: str, json: dict = None, params: dict =
             detail = resp.json() if resp.headers.get("content-type") == "application/json" else {"code": "ERROR", "message": str(e)}
             raise HTTPException(status_code=e.response.status_code, detail=detail)
         except (httpx.ConnectError, httpx.TimeoutException):
-            raise ServiceUnavailable()
+            raise CatalogUnavailable()

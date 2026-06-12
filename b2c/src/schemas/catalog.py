@@ -1,5 +1,5 @@
 from uuid import UUID
-
+from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -18,11 +18,11 @@ class CatalogFilterSchema(BaseModel):
     def is_empty(self) -> bool:
         """True, если ни один фильтр не задан"""
         return (
-            self.category_id is None
-            and self.price_min is None
-            and self.price_max is None
-            and self.seller_id is None
-            and not self.attributes
+                self.category_id is None
+                and self.price_min is None
+                and self.price_max is None
+                and self.seller_id is None
+                and not self.attributes
         )
 
 
@@ -132,3 +132,61 @@ class CatalogProductDetailResponseSchema(BaseModel):
     images: list[CatalogProductDetailImageSchema] = Field(default_factory=list)
     characteristics: list[CatalogProductDetailCharacteristicSchema] = Field(default_factory=list)
     skus: list[CatalogProductDetailSkuSchema] = Field(default_factory=list)
+
+
+class CategoryResponseSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    name: str
+    slug: str
+    parent_id: UUID | None
+    ordering: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class CategoryTreeNodeSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    name: str
+    slug: str
+    parent_id: UUID | None
+    ordering: int
+    level: int
+    path: list[str]
+    children: list['CategoryTreeNodeSchema'] = Field(default_factory=list)
+
+
+class CategoryTreeResponseSchema(BaseModel):
+    items: list[CategoryTreeNodeSchema]
+
+
+class CategoryBreadcrumbNodeSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    name: str
+    slug: str
+    level: int
+    is_current: bool
+
+
+class BreadcrumbsResponseSchema(BaseModel):
+    data: list[CategoryBreadcrumbNodeSchema]
+    meta: dict[str, str]
+
+
+# ----- Фильтры категории ???-----
+class CategoryFilterItemSchema(BaseModel):
+    slug: str
+    name: str
+    type: str
+    value: list[str] | None = None
+    min: int | None = None
+    max: int | None = None
+
+
+class CategoryFiltersResponseSchema(BaseModel):
+    items: list[CategoryFilterItemSchema]

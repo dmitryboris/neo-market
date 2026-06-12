@@ -3,7 +3,7 @@ from unittest.mock import patch, AsyncMock
 from httpx import AsyncClient
 from src.main import app
 from src.schemas.catalog import CatalogFacetsResponseSchema
-from src.services.catalog_service import ServiceUnavailable
+from src.services.exceptions import CatalogUnavailable
 
 
 
@@ -127,7 +127,7 @@ async def test_invalid_sort_returns_400(client):
 @pytest.mark.asyncio
 async def test_b2b_unavailable_returns_502(client):
     """При недоступности B2B возвращается 503 Service Unavailable."""
-    with patch("src.services.catalog_service._request_b2b", side_effect=ServiceUnavailable()):
+    with patch("src.services.catalog_service._request_b2b", side_effect=CatalogUnavailable()):
         response = await client.get("/api/v1/catalog/products")
 
     assert response.status_code == 503

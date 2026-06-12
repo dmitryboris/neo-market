@@ -1,7 +1,7 @@
 from shared.exceptions import DomainException
 
 
-class ServiceUnavailable(DomainException):
+class CatalogUnavailable(DomainException):
     def __init__(self, code="SERVICE_UNAVAILABLE", message="B2B service unavailable", status_code=503):
         super().__init__(code=code, message=message, status_code=status_code)
 

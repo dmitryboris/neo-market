@@ -1,5 +1,5 @@
 import httpx
-from uuid import uuid4
+from uuid import uuid4, UUID
 from src.config import settings
 from src.schemas.catalog import (
     CatalogFilterSchema,
@@ -10,18 +10,22 @@ from src.schemas.catalog import (
     CatalogProductDetailImageSchema,
     CatalogProductDetailCharacteristicSchema,
     ImageRefSchema,
-    CatalogFacetsResponseSchema
+    CatalogFacetsResponseSchema,
+    CategoryRefSchema,
+    CategoryTreeNodeSchema,
+    CategoryTreeResponseSchema,
+    CategoryFiltersResponseSchema
 )
-from src.services.exceptions import ServiceUnavailable, InvalidSort, ProductNotFound
+from src.services.exceptions import CatalogUnavailable, InvalidSort, ProductNotFound
 from src.services.communication_service import _request_b2b
 
 
 async def get_products(
-    filters: CatalogFilterSchema,
-    search: str | None = None,
-    sort: str = "created_desc",
-    limit: int = 20,
-    offset: int = 0,
+        filters: CatalogFilterSchema,
+        search: str | None = None,
+        sort: str = "created_desc",
+        limit: int = 20,
+        offset: int = 0,
 ) -> CatalogPaginatedResponseSchema:
     allowed_sorts = {"rating", "popularity", "price_asc", "price_desc", "date_desc", "discount_desc", "created_desc"}
     if sort not in allowed_sorts:
@@ -69,6 +73,7 @@ async def get_products(
         offset=data["offset"],
     )
 
+
 async def get_product_detail(product_id: str) -> CatalogProductDetailResponseSchema:
     data = await _request_b2b("POST", "/api/v1/public/products/batch", json={"product_ids": [product_id]})
 
@@ -82,7 +87,8 @@ async def get_product_detail(product_id: str) -> CatalogProductDetailResponseSch
     has_stock = False
     for sku in item.get("skus", []):
         sku_image = sku["images"][0]["url"] if sku.get("images") else None
-        sku_chars = [CatalogProductDetailCharacteristicSchema(name=c["name"], value=c["value"]) for c in sku.get("characteristics", [])]
+        sku_chars = [CatalogProductDetailCharacteristicSchema(name=c["name"], value=c["value"]) for c in
+                     sku.get("characteristics", [])]
         in_stock = sku["active_quantity"] > 0
         skus.append(CatalogProductDetailSkuSchema(
             id=sku["id"],
@@ -99,8 +105,10 @@ async def get_product_detail(product_id: str) -> CatalogProductDetailResponseSch
         if in_stock:
             has_stock = True
 
-    images = [CatalogProductDetailImageSchema(id=img["id"], url=img["url"], ordering=img["ordering"]) for img in item.get("images", [])]
-    characteristics = [CatalogProductDetailCharacteristicSchema(name=c["name"], value=c["value"]) for c in item.get("characteristics", [])]
+    images = [CatalogProductDetailImageSchema(id=img["id"], url=img["url"], ordering=img["ordering"]) for img in
+              item.get("images", [])]
+    characteristics = [CatalogProductDetailCharacteristicSchema(name=c["name"], value=c["value"]) for c in
+                       item.get("characteristics", [])]
 
     return CatalogProductDetailResponseSchema(
         id=item["id"],
@@ -115,10 +123,49 @@ async def get_product_detail(product_id: str) -> CatalogProductDetailResponseSch
         skus=skus,
     )
 
-async def get_facets(filters: CatalogFilterSchema) -> CatalogFacetsResponseSchema:
-    """Проксирует запрос фасетов к B2B (???? какие фасеты такова нет)."""
+
+async def get_facets(
+        category_id: UUID | None = None,
+        price_min: int | None = None,
+        price_max: int | None = None,
+) -> CatalogFacetsResponseSchema:
     params = {}
-    if filters.category_id:
-        params["category_id"] = str(filters.category_id)
-    data = await _request_b2b("GET", "/api/v1/catalog/facets", params=params)
+    if category_id is not None:
+        params["category_id"] = str(category_id)
+    if price_min is not None:
+        params["min_price"] = price_min
+    if price_max is not None:
+        params["max_price"] = price_max
+
+    data = await _request_b2b("GET", "/api/v1/public/facets", params=params)
     return CatalogFacetsResponseSchema(**data)
+
+
+async def get_categories_flat() -> list[CategoryRefSchema]:
+    params = {"only_root": "true"}
+    data = await _request_b2b("GET", "/api/v1/public/categories", params=params)
+    return [CategoryRefSchema(**item) for item in data]
+
+
+async def get_categories_tree() -> CategoryTreeResponseSchema:
+    data = await _request_b2b("GET", "/api/v1/public/categories/tree")
+
+    def build_tree(node: dict) -> CategoryTreeNodeSchema:
+        children = [build_tree(child) for child in node.get("children", [])]
+        return CategoryTreeNodeSchema(
+            id=node["id"],
+            name=node["name"],
+            slug=node.get("slug", ""),
+            parent_id=node.get("parent_id"),
+            ordering=node.get("ordering", 0),
+            level=node.get("level", 0),
+            path=node.get("path", []),
+            children=children,
+        )
+
+    return [build_tree(node) for node in data]
+
+
+async def get_category_filters(category_id: UUID) -> CategoryFiltersResponseSchema:
+    data = await _request_b2b("GET", f"/api/v1/public/categories/{category_id}/filters")
+    return CategoryFiltersResponseSchema(**data)
