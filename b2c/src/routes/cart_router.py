@@ -6,7 +6,7 @@ from src.services.cart_service import (get_or_create_cart, enrich_cart, add_cart
                                     clear_cart_service, validate_cart_service, merge_carts_service)
 from src.models import Buyer
 from src.schemas.cart import CartItemAddRequest, CartItemUpdateRequest, CartResponse, CartValidationResponse
-import uuid
+from uuid import UUID
 from src.services.exceptions import InvalidAuth
 
 cart_router = APIRouter(prefix="/cart", tags=["Cart"])
@@ -43,32 +43,20 @@ async def add_cart_item(
     response.status_code = status_code
     return enriched_cart
 
-@cart_router.patch("/items/{sku_id}", response_model=CartResponse)
+@cart_router.patch("/items/{sku_id}", status_code=status.HTTP_200_OK, response_model=CartResponse)
 async def update_cart_item(
-    sku_id: uuid.UUID,
+    sku_id: UUID,
     update: CartItemUpdateRequest,
     session_cart = Depends(_get_cart_and_session)
 ):
     session, cart = session_cart
-    try:
-        await update_cart_item_quantity(session, cart, sku_id, update.quantity)
-        await session.commit()
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"code": "NOT_FOUND", "message": str(e)}
-        )
-    except Exception as e:
-        await session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={"code": "INSUFFICIENT_STOCK", "message": str(e)}
-        )
-    return await enrich_cart(session, cart)
+    enriched_cart = await update_cart_item_quantity(session, cart, sku_id, update.quantity)
+    await session.commit()
+    return enriched_cart
 
 @cart_router.delete("/items/{sku_id}", response_model=CartResponse)
 async def delete_cart_item(
-    sku_id: uuid.UUID,
+    sku_id: UUID,
     session_cart = Depends(_get_cart_and_session)
 ):
     session, cart = session_cart

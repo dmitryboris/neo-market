@@ -16,7 +16,7 @@ class CartItemAddRequest(BaseModel):
     quantity: int = Field(..., ge=1)
 
 class CartItemUpdateRequest(BaseModel):
-    quantity: int = Field(..., ge=1)
+    quantity: int
 
 class CartItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)

@@ -6,7 +6,7 @@ from src.models import Cart
 from src.models.cart_item import CartItem as CartItemModel
 from src.services.b2b_client import get_sku, batch_get_products
 from src.schemas.cart import CartResponse, CartItem, CartValidationIssue, CartValidationResponse
-from src.services.exceptions import InsufficientStock
+from src.services.exceptions import InsufficientStock, InvalidQuantity, ItemNotFound
 from fastapi import status
 
 async def get_or_create_cart(
@@ -68,18 +68,25 @@ async def update_cart_item_quantity(
     cart: Cart,
     sku_id: UUID,
     new_quantity: int
-) -> CartItemModel:
+) -> CartResponse:
     if new_quantity <= 0:
-        raise ValueError("Quantity must be positive")
-    await get_sku(sku_id, new_quantity)
-    stmt = select(CartItemModel).where(CartItemModel.cart_id == cart.id, CartItemModel.sku_id == sku_id)
+        raise InvalidQuantity()
+    
+    sku_info = await get_sku(sku_id)
+    if sku_info["active_quantity"] < new_quantity:
+        raise InsufficientStock(f"Insufficient stock for SKU {sku_id}")
+    stmt = select(CartItemModel).where(
+        CartItemModel.cart_id == cart.id,
+        CartItemModel.sku_id == sku_id
+    )
     result = await session.execute(stmt)
     item = result.scalar_one_or_none()
     if not item:
-        raise ValueError("Item not found in cart")
+        raise ItemNotFound()
     item.quantity = new_quantity
     await session.flush()
-    return item
+    enriched = await enrich_cart(session, cart)
+    return enriched
 
 async def remove_cart_item(
     session: AsyncSession,
@@ -169,15 +176,21 @@ async def enrich_cart(session: AsyncSession, cart: Cart) -> CartResponse:
         unit_price = data["price"]
         available_qty = data["active_quantity"]
         product_status = data["product_status"]
+
         if product_status != "MODERATED":
             is_available = False
-        else:
-            is_available = (available_qty >= item.quantity)
-        if not is_available:
+            line_total = 0
             is_valid = False
-        line_total = unit_price * item.quantity if is_available else 0
-        if is_available:
+        elif available_qty == 0:
+            is_available = False
+            line_total = 0
+            is_valid = False
+        else:
+            is_available = True
+            line_total = unit_price * item.quantity
             subtotal += line_total
+            if available_qty < item.quantity:
+                is_valid = False
 
         cart_items.append(CartItem(
             sku_id=item.sku_id,
@@ -210,11 +223,27 @@ async def validate_cart_service(
     issues = []
     for item in enriched.items:
         if not item.is_available:
-            reason = "OUT_OF_STOCK" if item.available_quantity == 0 else "PRODUCT_BLOCKED"
+            if item.name == "Товар недоступен":
+                issue_type = "PRODUCT_DELETED"
+                message = "Товар удалён"
+            elif item.available_quantity == 0:
+                issue_type = "OUT_OF_STOCK"
+                message = "Нет в наличии"
+            else:
+                issue_type = "PRODUCT_BLOCKED"
+                message = "Товар недоступен"
             issues.append(CartValidationIssue(
                 sku_id=item.sku_id,
-                type=reason,
-                message=f"Товар {item.name} недоступен",
+                type=issue_type,
+                message=message,
+            ))
+        elif item.quantity > item.available_quantity:
+            issues.append(CartValidationIssue(
+                sku_id=item.sku_id,
+                type="QUANTITY_REDUCED",
+                message=f"Доступно только {item.available_quantity} шт.",
+                old_value=item.quantity,
+                new_value=item.available_quantity,
             ))
     is_valid = len(issues) == 0
     return CartValidationResponse(is_valid=is_valid, cart=enriched, issues=issues)
