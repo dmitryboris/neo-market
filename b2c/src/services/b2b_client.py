@@ -68,3 +68,21 @@ async def batch_get_products(product_ids: List[UUID]) -> Dict[UUID, dict]:
             "title": prod["title"],
         }
     return result
+
+
+async def reserve_skus(idempotency_key: UUID, items: list[dict]) -> dict:
+    """
+    Вызывает POST /api/v1/inventory/reserve в B2B.
+    Возвращает результат (успех или ошибку).
+    При 409 возвращает словарь с reserved=False и failed_items.
+    """
+    payload = {
+        "idempotency_key": str(idempotency_key),
+        "items": items,
+    }
+    try:
+        return await _request("POST", "/api/v1/inventory/reserve", json=payload)
+    except HTTPException as e:
+        if e.status_code == 409:
+            return e.detail
+        raise
