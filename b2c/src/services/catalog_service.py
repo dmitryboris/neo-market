@@ -1,5 +1,6 @@
 import httpx
 from uuid import uuid4, UUID
+from fastapi import HTTPException
 from src.config import settings
 from src.schemas.catalog import (
     CatalogFilterSchema,
@@ -75,8 +76,12 @@ async def get_products(
 
 
 async def get_product_detail(product_id: str) -> CatalogProductDetailResponseSchema:
-    data = await _request_b2b("POST", "/api/v1/public/products/batch", json={"product_ids": [product_id]})
-
+    try:
+        data = await _request_b2b("POST", "/api/v1/public/products/batch", json={"product_ids": [product_id]})
+    except HTTPException as e:
+        if e.status_code == 404:
+            raise ProductNotFound()
+        raise e
     if not data:
         raise ProductNotFound()
 
