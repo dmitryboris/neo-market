@@ -1,12 +1,12 @@
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi.security import OAuth2PasswordRequestForm
+# from fastapi.security import OAuth2PasswordRequestForm
 from src.database import get_session
 from src.schemas.auth import (
     LoginRequest, RefreshRequest, TokenResponse, LogoutRequest
 )
 from src.services.auth_service import (
-    register_moderator, login_moderator, refresh_token_pair, logout_moderator
+    login_moderator, refresh_token_pair, logout_moderator
 )
 from src.dependencies import get_token_payload
 
@@ -30,7 +30,7 @@ async def refresh(
     return await refresh_token_pair(refresh_token_str=request.refresh_token, session=session)
 
 
-@auth_router.post("/logout", status_code=204)
+@auth_router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
         request: LogoutRequest,
         access_payload: dict = Depends(get_token_payload),
@@ -40,6 +40,7 @@ async def logout(
     return None
 
 
+"""
 @auth_router.post("/token", response_model=TokenResponse)
 async def token_form(
         form_data: OAuth2PasswordRequestForm = Depends(),
@@ -47,3 +48,4 @@ async def token_form(
 ):
     request = LoginRequest(email=form_data.username, password=form_data.password)
     return await login_moderator(request=request, session=session)
+"""

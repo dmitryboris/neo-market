@@ -1,4 +1,4 @@
-from fastapi import Depends, Header
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_session
@@ -80,3 +80,14 @@ async def get_current_user_optional(
         return buyer
     except Exception:
         return None
+
+
+async def require_admin_role(
+        current: Moderator = Depends(get_current_user),
+):
+    if current.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "FORBIDDEN", "message": "Insufficient privileges"},
+        )
+    return current

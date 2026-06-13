@@ -4,7 +4,7 @@ from sqlalchemy import select
 from src.models import Moderator, RefreshToken, RefreshBlacklist
 from src.config import settings
 from src.schemas.auth import (
-    ModeratorRegisterRequest, LoginRequest, TokenResponse
+    LoginRequest, TokenResponse
 )
 from shared.security import TokenService, hash_password, verify_password
 from shared.enums import UserRole
@@ -28,7 +28,7 @@ async def get_moderator(email: str, session: AsyncSession) -> Moderator | None:
     result = await session.execute(stmt)
     return result.scalars().first()
 
-
+"""
 async def register_moderator(request: ModeratorRegisterRequest, session: AsyncSession) -> TokenResponse:
     existing = await get_moderator(request.email, session)
     if existing:
@@ -66,7 +66,7 @@ async def register_moderator(request: ModeratorRegisterRequest, session: AsyncSe
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         token_type="Bearer",
     )
-
+"""
 
 async def login_moderator(request: LoginRequest, session: AsyncSession) -> TokenResponse:
     moderator = await get_moderator(request.email, session)
