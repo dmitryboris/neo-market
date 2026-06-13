@@ -12,6 +12,9 @@ jobs:
       matrix:
         test-file:
           - US-MOD-03.py
+          - US-MOD-04.py
+          - US-MOD-05.py
+
 
     services:
       postgres:
