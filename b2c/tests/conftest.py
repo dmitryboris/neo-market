@@ -107,11 +107,12 @@ async def test_address(db_session):
 async def test_payment_method(db_session):
     pm = PaymentMethod(
         buyer_id=TEST_BUYER_ID,
-        brand="CARD",
+        brand="MASTERCARD",
         last4="1234",
         exp_year=2030,
         exp_month=12,
         is_default=True,
+        type="CARD"
     )
     db_session.add(pm)
     await db_session.commit()
@@ -132,3 +133,20 @@ async def cart_with_items(db_session, mock_b2b_batch):
         db_session.add(item)
     await db_session.commit()
     return cart, [sku1, sku2]
+
+
+@pytest.fixture
+async def another_buyer(db_session):
+    buyer = Buyer(
+        id=uuid4(),
+        email="other@test.com",
+        first_name="Other",
+        last_name="User",
+        phone="+10000000000",
+        password_hash="fake",
+        role="BUYER",
+        is_active=True,
+    )
+    db_session.add(buyer)
+    await db_session.commit()
+    return buyer

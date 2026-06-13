@@ -88,3 +88,16 @@ async def reserve_skus(idempotency_key: UUID, items: list[dict]) -> dict:
             raise B2BUnavailable()
         
         raise
+
+
+async def unreserve_skus(order_id: UUID, items: list[dict]) -> dict:
+    payload = {
+        "order_id": str(order_id),
+        "items": items,
+    }
+
+    return await _request(
+        "POST",
+        "/api/v1/inventory/unreserve",
+        json=payload,
+    )

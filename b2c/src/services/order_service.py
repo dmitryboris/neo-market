@@ -6,9 +6,10 @@ from src.models import Order, OrderItem as OrderItemModel, Address, PaymentMetho
 from src.models.order import OrderStatus
 from src.schemas.order import OrderResponse, OrderItem as OrderItemSchema, AddressResponse, PaymentMethodResponse
 from src.services.cart_service import enrich_cart, get_or_create_cart
-from src.services.b2b_client import reserve_skus
+from src.services.b2b_client import reserve_skus, unreserve_skus
 from src.services.exceptions import (
-    CartInvalidException, CartMismatchException, ReserveFailed, AddressNotFound, PaymentMethodNotFound, IdempotencyConflict
+    CartInvalidException, CartMismatchException, ReserveFailed, AddressNotFound, PaymentMethodNotFound, IdempotencyConflict,
+    OrderNotFound, CancelNotAllowed, B2BUnavailable
 )
 import hashlib
 import json
@@ -145,6 +146,64 @@ async def create_order(
     address, payment_method, items = await _load_order_context(session, order)
     return _order_to_response(order, address, payment_method, items)
 
+
+async def cancel_order(
+    session: AsyncSession,
+    order_id: UUID,
+    buyer_id: UUID,
+) -> OrderResponse:
+    order = await session.get(Order, order_id)
+
+    if not order or order.user_id != buyer_id:
+        raise OrderNotFound()
+    allowed_statuses = {
+        OrderStatus.CREATED,
+        OrderStatus.PAID,
+        OrderStatus.ASSEMBLING,
+        OrderStatus.DELIVERING,
+    }
+
+    if order.status not in allowed_statuses:
+        raise CancelNotAllowed(order.status)
+    items_query = await session.execute(
+        select(OrderItemModel).where(
+            OrderItemModel.order_id == order.id
+        )
+    )
+
+    items = items_query.scalars().all()
+    order.status = OrderStatus.CANCEL_PENDING
+    await session.flush()
+    await session.commit()
+
+    try:
+        await unreserve_skus(
+            order.id,
+            [
+                {
+                    "sku_id": str(item.sku_id),
+                    "quantity": item.quantity,
+                }
+                for item in items
+            ],
+        )
+        order.status = OrderStatus.CANCELLED
+    except B2BUnavailable:
+        order.status = OrderStatus.CANCEL_PENDING
+
+    await session.commit()
+
+    address, payment_method, items = await _load_order_context(
+        session,
+        order,
+    )
+
+    return _order_to_response(
+        order,
+        address,
+        payment_method,
+        items,
+    )
 
 def _order_to_response(order: Order, address: Address, payment_method: PaymentMethod, items: List[OrderItemModel]) -> OrderResponse:
     order_items = []
