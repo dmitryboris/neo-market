@@ -21,9 +21,6 @@ class OrderStatus(StrEnum):
 
 class Order(UUIDMixin, TimestampMixin, Base):
     """Заказ покупателя.
-
-    Идемпотентность checkout: UNIQUE-индекс на `idempotency_key` — повторный POST
-    с тем же ключом возвращает существующий заказ (см. ADR в этом PR).
     """
 
     __tablename__ = 'orders'
@@ -31,12 +28,6 @@ class Order(UUIDMixin, TimestampMixin, Base):
     user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), ForeignKey('buyers.id'), index=True, nullable=False)
     status: Mapped[OrderStatus] = mapped_column(Enum(OrderStatus), nullable=False, default=OrderStatus.CREATED, index=True)
     total_amount: Mapped[int] = mapped_column(Integer, nullable=False)
-    idempotency_key: Mapped[uuid.UUID] = mapped_column(
-        Uuid(as_uuid=True),
-        unique=True,
-        nullable=False,
-        index=True,
-    )
     delivery_address: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     address_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
     payment_method_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)

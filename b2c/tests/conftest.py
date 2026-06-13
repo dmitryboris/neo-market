@@ -9,6 +9,7 @@ from src.dependencies import get_current_user, get_current_user_optional
 from src.models import Buyer
 from unittest.mock import AsyncMock, patch
 from src.services.auth_service import token_service
+from src.models import Address, PaymentMethod, Cart, CartItem
 
 TEST_BUYER_ID = uuid4()
 TEST_BUYER = Buyer(
@@ -85,3 +86,49 @@ def mock_b2b():
     with patch("src.services.cart_service.get_sku", new_callable=AsyncMock) as mock_sku, \
          patch("src.services.cart_service.batch_get_products", new_callable=AsyncMock) as mock_batch:
         yield {"sku": mock_sku, "batch": mock_batch}
+
+
+@pytest.fixture
+async def test_address(db_session):
+    address = Address(
+        buyer_id=TEST_BUYER_ID,
+        country="Russia",
+        city="Moscow",
+        street="Tverskaya",
+        building="1",
+        postal_code="125009",
+        is_default=True,
+    )
+    db_session.add(address)
+    await db_session.commit()
+    return address
+
+@pytest.fixture
+async def test_payment_method(db_session):
+    pm = PaymentMethod(
+        buyer_id=TEST_BUYER_ID,
+        brand="CARD",
+        last4="1234",
+        exp_year=2030,
+        exp_month=12,
+        is_default=True,
+    )
+    db_session.add(pm)
+    await db_session.commit()
+    return pm
+
+@pytest.fixture
+async def cart_with_items(db_session, mock_b2b_batch):
+    cart = Cart(user_id=TEST_BUYER_ID)
+    db_session.add(cart)
+    await db_session.flush()
+    sku1 = uuid4()
+    sku2 = uuid4()
+    items = [
+        CartItem(cart_id=cart.id, sku_id=sku1, product_id=uuid4(), quantity=2),
+        CartItem(cart_id=cart.id, sku_id=sku2, product_id=uuid4(), quantity=1),
+    ]
+    for item in items:
+        db_session.add(item)
+    await db_session.commit()
+    return cart, [sku1, sku2]

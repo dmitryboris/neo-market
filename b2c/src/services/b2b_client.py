@@ -4,6 +4,7 @@ from typing import Dict, List, Optional
 from src.config import settings
 from src.services.exceptions import SkuNotFound
 from fastapi import HTTPException, status
+from src.services.exceptions import B2BUnavailable
 
 async def _request(method: str, path: str, json=None) -> dict:
     url = f"{settings.B2B_URL}{path}"
@@ -14,10 +15,7 @@ async def _request(method: str, path: str, json=None) -> dict:
             resp.raise_for_status()
             return resp.json()
     except (httpx.ConnectError, httpx.TimeoutException, httpx.ConnectTimeout):
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail={"code": "SERVICE_UNAVAILABLE", "message": "B2B service is unavailable"}
-        )
+        raise B2BUnavailable()
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 404:
             raise HTTPException(
@@ -68,3 +66,25 @@ async def batch_get_products(product_ids: List[UUID]) -> Dict[UUID, dict]:
             "title": prod["title"],
         }
     return result
+
+
+async def reserve_skus(idempotency_key: UUID, items: list[dict]) -> dict:
+    """
+    Вызывает POST /api/v1/inventory/reserve в B2B.
+    Возвращает результат (успех или ошибку).
+    При 409 возвращает словарь с reserved=False и failed_items.
+    """
+    payload = {
+        "idempotency_key": str(idempotency_key),
+        "items": items,
+    }
+    try:
+        return await _request("POST", "/api/v1/inventory/reserve", json=payload)
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 409:
+            return e.response.json()
+        
+        if e.response.status_code == 503:
+            raise B2BUnavailable()
+        
+        raise

@@ -454,8 +454,8 @@ async def test_b2b_unavailable_returns_503(client, auth_client, db_session):
     await db_session.commit()
 
     with patch("src.services.b2b_client.batch_get_products", side_effect=HTTPException(
-        status_code=503, detail={"code": "SERVICE_UNAVAILABLE", "message": "B2B service is unavailable"}
+        status_code=503, detail={"code": "B2B_UNAVAILABLE", "message": "B2B service is unavailable"}
     )):
         response = await client.get("/api/v1/cart")
         assert response.status_code == 503
-        assert response.json()["code"] == "SERVICE_UNAVAILABLE"
+        assert response.json()["code"] == "B2B_UNAVAILABLE"

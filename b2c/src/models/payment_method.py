@@ -17,3 +17,4 @@ class PaymentMethod(UUIDMixin, TimestampMixin, Base):
     exp_year: Mapped[int] = mapped_column(Integer, nullable=False)
     exp_month: Mapped[int] = mapped_column(Integer, nullable=False)
     is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default='false')
+    type: Mapped[str] = mapped_column(String(32), nullable=False)
