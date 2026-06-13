@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Header, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.schemas.order import OrderCreateRequest, OrderResponse
-from src.services.order_service import create_order
+from src.services.order_service import create_order, cancel_order
 from src.database import get_session
 from src.dependencies import get_current_user
 from src.models.buyer import Buyer
@@ -27,3 +27,16 @@ async def create_order_endpoint(
         items_snapshot=[i.model_dump() for i in request.items_snapshot] if request.items_snapshot else None,
     )
     return order
+
+
+@orders_router.post("/{order_id}/cancel")
+async def cancel_order_endpoint(
+    order_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: Buyer = Depends(get_current_user)
+):
+    return await cancel_order(
+        session=session,
+        order_id=order_id,
+        buyer_id=current_user.id,
+    )

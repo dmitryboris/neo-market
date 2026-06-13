@@ -15,6 +15,7 @@ jobs:
           - US-B2C-CAT-03.py
           - US-B2C-CART-03.py
           - US-B2C-ORD-01.py
+          - US-B2C-ORD-03.py
 
     services:
       postgres:

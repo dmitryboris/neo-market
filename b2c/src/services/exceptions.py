@@ -101,3 +101,14 @@ class PaymentMethodNotFound(DomainException):
 class IdempotencyConflict(DomainException):
     def __init__(self, message="Idempotency body not valid"):
         super().__init__(code="IDEMPOTENCY_CONFLICT", message=message, status_code=409)
+
+
+class OrderNotFound(DomainException):
+    def __init__(self, message="Order not found or not owned"):
+        super().__init__(code="ORDER_NOT_FOUND", message=message, status_code=404)
+
+
+class CancelNotAllowed(DomainException):
+    def __init__(self, current_status: str):
+        super().__init__(code="CANCEL_NOT_ALLOWED", message=f"Отмена невозможна: заказ в статусе {current_status}", status_code=409)
+        self.details={"current_status": current_status}
