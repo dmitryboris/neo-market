@@ -1,4 +1,4 @@
-name: B2B
+name: MOD
 
 on:
   pull_request:
@@ -11,14 +11,7 @@ jobs:
       fail-fast: false
       matrix:
         test-file:
-          - US-B2B-01.py
-          - US-B2B-02.py
-          - US-B2B-03.py
-          - US-B2B-04.py
-          - US-B2B-05.py
-          - US-B2B-07.py
-          - US-B2B-08.py
-          - US-B2B-09.py
+          - US-MOD-03.py
 
     services:
       postgres:
@@ -26,7 +19,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: b2b
+          POSTGRES_DB: moderation
         ports:
           - 5432:5432
         options: >-
@@ -46,15 +39,15 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r b2b/requirements.txt
-          pip install -r b2b/requirements-test.txt
+          pip install -r moderation/requirements.txt
+          pip install -r moderation/requirements-test.txt
 
       - name: Prepare environment
         run: |
-          cp .env.example b2b/.env
-          sed -i 's/DB_HOST=.*/DB_HOST=localhost/' b2b/.env
+          cp .env.example moderation/.env
+          sed -i 's/DB_HOST=.*/DB_HOST=localhost/' moderation/.env
           pip install ./shared
 
       - name: Run ${{ matrix.test-file }}
-        working-directory: b2b
+        working-directory: moderation
         run: pytest --asyncio-mode=auto tests/${{ matrix.test-file }} -v

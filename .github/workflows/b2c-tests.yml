@@ -1,4 +1,4 @@
-name: Run
+name: B2C
 
 on:
   pull_request:
