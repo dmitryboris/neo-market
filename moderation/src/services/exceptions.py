@@ -44,3 +44,13 @@ class TicketHasNoSKUs(DomainException):
 class B2BServiceUnavailable(DomainException):
     def __init__(self, message="B2B service unavailable"):
         super().__init__(code="SERVICE_UNAVAILABLE", message=message, status_code=500)
+
+
+class BlockingReasonNotFound(DomainException):
+    def __init__(self, message="Blocking reason not found"):
+        super().__init__(code="INVALID_REQUEST", message=message, status_code=400)
+
+
+class TicketHardBlockedModify(DomainException):
+    def __init__(self, message="Cannot modify hard-blocked ticket"):
+        super().__init__(code="FORBIDDEN", message=message, status_code=403)

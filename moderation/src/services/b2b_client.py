@@ -35,3 +35,29 @@ async def send_moderated_event(product_id: UUID) -> None:
             raise B2BServiceUnavailable(f"B2B error: {e.response.status_code}")
         except (httpx.ConnectError, httpx.TimeoutException):
             raise B2BServiceUnavailable("B2B service unavailable")
+
+
+async def send_blocked_event(
+        product_id: UUID,
+        hard_block: bool,
+        reasons: list[dict],
+        field_reports: list[dict],
+) -> None:
+    url = f"{settings.B2B_URL}/api/v1/events/moderation"
+    headers = {"X-Service-Key": settings.MOD_TO_B2B_KEY}
+    payload = {
+        "product_id": str(product_id),
+        "status": "BLOCKED",
+        "hard_block": hard_block,
+        "blocking_reason": reasons[0] if reasons else None,
+        "blocking_reasons": reasons,
+        "field_reports": field_reports,
+    }
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        try:
+            resp = await client.post(url, json=payload, headers=headers)
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            raise B2BServiceUnavailable(f"B2B error: {e.response.status_code}")
+        except (httpx.ConnectError, httpx.TimeoutException):
+            raise B2BServiceUnavailable()
