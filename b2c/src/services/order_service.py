@@ -2,15 +2,16 @@ from uuid import UUID
 from typing import Optional, List
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.models import Order, OrderItem as OrderItemModel, Address, PaymentMethod
+from src.models import Order, OrderItem as OrderItemModel, Address, PaymentMethod, IdempotencyRecord
 from src.models.order import OrderStatus
 from src.schemas.order import OrderResponse, OrderItem as OrderItemSchema, AddressResponse, PaymentMethodResponse
 from src.services.cart_service import enrich_cart, get_or_create_cart
 from src.services.b2b_client import reserve_skus
 from src.services.exceptions import (
-    CartInvalidException, CartMismatchException, ReserveFailed, AddressNotFound, PaymentMethodNotFound
+    CartInvalidException, CartMismatchException, ReserveFailed, AddressNotFound, PaymentMethodNotFound, IdempotencyConflict
 )
-
+import hashlib
+import json
 
 async def create_order(
     session: AsyncSession,
@@ -21,16 +22,21 @@ async def create_order(
     comment: Optional[str] = None,
     items_snapshot: Optional[List[dict]] = None,
 ) -> OrderResponse:
-    existing = await session.execute(select(Order).where(Order.idempotency_key == idempotency_key))
-    existing_order = existing.scalar_one_or_none()
-    if existing_order:
-        address = await session.get(Address, existing_order.address_id)
-        payment_method = await session.get(PaymentMethod, existing_order.payment_method_id)
-        items_result = await session.execute(
-            select(OrderItemModel).where(OrderItemModel.order_id == existing_order.id)
-        )
-        items = items_result.scalars().all()
-        return _order_to_response(existing_order, address, payment_method, items)
+    request_hash = _hash_request(address_id, payment_method_id, comment, items_snapshot)
+
+    existing_record = await session.get(IdempotencyRecord, idempotency_key)
+
+    if existing_record:
+        if existing_record.request_hash != request_hash:
+            raise IdempotencyConflict()
+
+        order = await session.get(Order, existing_record.order_id)
+        if not order:
+            await session.delete(existing_record)
+            await session.commit()
+        else:
+            address, payment_method, items = await _load_order_context(session, order)
+            return _order_to_response(order, address, payment_method, items)
 
     cart = await get_or_create_cart(session, user_id=buyer_id)
     enriched_cart = await enrich_cart(session, cart)
@@ -38,10 +44,16 @@ async def create_order(
     if not enriched_cart.items:
         raise CartInvalidException({
             "is_valid": False,
-            "cart": enriched_cart.model_dump(mode='json'),
-            "issues": [{"sku_id": None, "type": "EMPTY_CART", "message": "Cart is empty"}]
+            "cart": enriched_cart.model_dump(mode="json"),
+            "issues": [
+                {
+                    "sku_id": None,
+                    "type": "EMPTY_CART",
+                    "message": "Cart is empty"
+                }
+            ]
         })
-    
+
     failed_items = []
     for item in enriched_cart.items:
         if not item.is_available:
@@ -53,7 +65,7 @@ async def create_order(
                 "reason": reason,
             })
         elif item.quantity > item.available_quantity:
-            failed_items.append({
+                failed_items.append({
                 "sku_id": str(item.sku_id),
                 "requested": item.quantity,
                 "available": item.available_quantity,
@@ -78,29 +90,44 @@ async def create_order(
     if not payment_method or payment_method.buyer_id != buyer_id:
         raise PaymentMethodNotFound()
 
-    reserve_items = [{"sku_id": str(item.sku_id), "quantity": item.quantity} for item in enriched_cart.items]
+    reserve_items = [
+        {"sku_id": str(item.sku_id), "quantity": item.quantity}
+        for item in enriched_cart.items
+    ]
+
     reserve_result = await reserve_skus(idempotency_key, reserve_items)
 
     if not reserve_result.get("reserved", False):
         raise ReserveFailed(reserve_result.get("failed_items", []))
 
-    total_amount = 0
     order = Order(
         user_id=buyer_id,
         status=OrderStatus.PAID,
         total_amount=0,
-        idempotency_key=idempotency_key,
         address_id=address_id,
         payment_method_id=payment_method_id,
         comment=comment,
     )
+
     session.add(order)
-    await session.flush()
+    await session.flush()  # order.id exists now
+
+    if not existing_record:
+        session.add(
+            IdempotencyRecord(
+                idempotency_key=idempotency_key,
+                request_hash=request_hash,
+                order_id=order.id,
+            )
+        )
+
+    total_amount = 0
 
     for item in enriched_cart.items:
         line_total = item.unit_price * item.quantity
         total_amount += line_total
-        order_item = OrderItemModel(
+
+        session.add(OrderItemModel(
             order_id=order.id,
             sku_id=item.sku_id,
             product_id=item.product_id,
@@ -109,19 +136,13 @@ async def create_order(
             quantity=item.quantity,
             unit_price=item.unit_price,
             line_total=line_total,
-        )
-        session.add(order_item)
+        ))
 
     order.total_amount = total_amount
+
     await session.commit()
 
-    await session.refresh(order)
-    address = await session.get(Address, order.address_id)
-    payment_method = await session.get(PaymentMethod, order.payment_method_id)
-    items_query = await session.execute(
-        select(OrderItemModel).where(OrderItemModel.order_id == order.id)
-    )
-    items = items_query.scalars().all()
+    address, payment_method, items = await _load_order_context(session, order)
     return _order_to_response(order, address, payment_method, items)
 
 
@@ -171,7 +192,7 @@ def _order_to_response(order: Order, address: Address, payment_method: PaymentMe
         number=None,
         buyer_id=order.user_id,
         status=order.status,
-        status_history=None,
+        status_history=[],
         items=order_items,
         subtotal=subtotal,
         delivery_cost=0,
@@ -184,3 +205,31 @@ def _order_to_response(order: Order, address: Address, payment_method: PaymentMe
         paid_at=order.created_at,
         delivered_at=None,
     )
+
+def _hash_request(address_id: UUID, payment_method_id: UUID, comment: str | None, items_snapshot: list | None) -> str:
+
+    data = {
+        "address_id": str(address_id),
+        "payment_method_id": str(payment_method_id),
+        "comment": comment,
+        "items_snapshot": items_snapshot,
+    }
+    json_str = json.dumps(data, sort_keys=True, default=str)
+    return hashlib.sha256(json_str.encode()).hexdigest()
+
+
+async def _load_order_context(session: AsyncSession, order: Order):
+    address = await session.get(Address, order.address_id)
+    if not address:
+        raise AddressNotFound()
+
+    payment_method = await session.get(PaymentMethod, order.payment_method_id)
+    if not payment_method:
+        raise PaymentMethodNotFound()
+
+    items_query = await session.execute(
+        select(OrderItemModel).where(OrderItemModel.order_id == order.id)
+    )
+    items = items_query.scalars().all()
+
+    return address, payment_method, items

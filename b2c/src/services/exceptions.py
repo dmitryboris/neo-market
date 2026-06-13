@@ -96,3 +96,8 @@ class AddressNotFound(DomainException):
 class PaymentMethodNotFound(DomainException):
     def __init__(self, message="Payment method not found or not owned"):
         super().__init__(code="PAYMENT_METHOD_NOT_FOUND", message=message, status_code=404)
+
+
+class IdempotencyConflict(DomainException):
+    def __init__(self, message="Idempotency body not valid"):
+        super().__init__(code="IDEMPOTENCY_CONFLICT", message=message, status_code=409)

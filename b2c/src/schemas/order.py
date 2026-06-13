@@ -96,7 +96,7 @@ class OrderResponse(BaseModel):
     number: Optional[str] = Field(None, description="Человекочитаемый номер заказа")
     buyer_id: UUID
     status: OrderStatus
-    status_history: Optional[List[StatusHistoryEntry]] = None
+    status_history: List[StatusHistoryEntry] = Field(default_factory=list)
     items: List[OrderItem]
     subtotal: int = Field(description="Сумма по позициям, копейки")
     delivery_cost: int = 0

@@ -3,7 +3,7 @@ from uuid import uuid4, UUID
 from unittest.mock import AsyncMock, patch
 from httpx import AsyncClient, HTTPStatusError
 from sqlalchemy import select
-from src.models import Order, OrderItem, Address, PaymentMethod, Cart, CartItem, Buyer
+from src.models import Order, OrderItem, Address, PaymentMethod, Cart, CartItem, Buyer, IdempotencyRecord
 from src.models.order import OrderStatus
 from tests.conftest import TEST_BUYER_ID, create_access_token
 
@@ -227,8 +227,8 @@ async def test_partial_reserve_failure_returns_409(
         assert error["details"]["failed_items"][0]["sku_id"] == str(sku2)
         assert error["details"]["failed_items"][0]["reason"] == "OUT_OF_STOCK"
 
-        orders = await db_session.execute(select(Order).where(Order.idempotency_key == idempotency_key))
-        assert orders.scalar_one_or_none() is None
+        record = await db_session.get(IdempotencyRecord, UUID(idempotency_key))
+        assert record is None
 
 
 @pytest.mark.asyncio
@@ -266,5 +266,5 @@ async def test_b2b_unavailable_returns_503(
         error = response.json()
         assert error["code"] == "B2B_UNAVAILABLE"
 
-        orders = await db_session.execute(select(Order).where(Order.idempotency_key == idempotency_key))
-        assert orders.scalar_one_or_none() is None
+        record = await db_session.get(IdempotencyRecord, UUID(idempotency_key))
+        assert record is None
