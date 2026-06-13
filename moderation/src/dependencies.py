@@ -2,11 +2,11 @@ from fastapi import Depends, Header
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_session
-from src.models.buyer import Buyer
+from src.models.moderator import Moderator
 from src.config import settings
 from typing import Optional
 from uuid import UUID
-from src.services.auth_service import get_buyer_by_id
+from src.services.auth_service import get_moderator_by_id
 
 from shared.exceptions import TokenInvalid, UserBlocked, Forbidden
 from shared.security import TokenService
@@ -40,7 +40,7 @@ async def get_current_user(
         token: str = Depends(oauth2_scheme),
         session: AsyncSession = Depends(get_session),
         ts: TokenService = Depends(get_token_service),
-) -> Buyer:
+) -> Moderator:
     if not token:
         raise TokenInvalid(message="Missing authorization token")
 
@@ -49,14 +49,14 @@ async def get_current_user(
     if not user_id:
         raise TokenInvalid(message="Token missing 'sub' claim")
 
-    user = await session.get(Buyer, user_id)
+    user = await session.get(Moderator, user_id)
     if not user:
         raise TokenInvalid()
     if not user.is_active:
         raise UserBlocked()
 
-    if user.role != UserRole.BUYER.value or payload.get("role") != user.role:
-        raise Forbidden(message="Access denied: buyer role required")
+    if user.role != UserRole.MODERATOR.value or payload.get("role") != user.role:
+        raise Forbidden(message="Access denied: moderator role required")
 
     return user
 
@@ -68,7 +68,7 @@ def get_session_id(x_session_id: Optional[str] = Header(None, alias="X-Session-I
 async def get_current_user_optional(
         session: AsyncSession = Depends(get_session),
         token: Optional[str] = Depends(oauth2_scheme),
-) -> Optional[Buyer]:
+) -> Optional[Moderator]:
     if not token:
         return None
     try:
@@ -76,7 +76,7 @@ async def get_current_user_optional(
         user_id = payload.get("sub")
         if not user_id:
             return None
-        buyer = await get_buyer_by_id(session, UUID(user_id))
+        buyer = await get_moderator_by_id(session, UUID(user_id))
         return buyer
     except Exception:
         return None

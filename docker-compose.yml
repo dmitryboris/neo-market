@@ -70,6 +70,43 @@ services:
     ports:
       - "8001:8000"
 
+  moderation_db:
+    image: postgres:18-alpine
+    container_name: moderation-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${MOD_DB_USER}
+      POSTGRES_PASSWORD: ${MOD_DB_PASSWORD}
+      POSTGRES_DB: ${MOD_DB_NAME}
+    volumes:
+      - moderation_pg_data:/var/lib/postgresql
+    ports:
+      - "${MOD_DB_PORT}:5432"
+
+  moderation:
+    build:
+      context: .
+      dockerfile: moderation/Dockerfile
+    container_name: moderation-api
+    restart: unless-stopped
+    environment:
+      MOD_DB_USER: ${MOD_DB_USER}
+      MOD_DB_PASSWORD: ${MOD_DB_PASSWORD}
+      MOD_DB_NAME: ${MOD_DB_NAME}
+      MOD_DB_PORT: 5432
+      MOD_DB_HOST: moderation_db
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: ${JWT_ALGORITHM}
+      B2B_URL: http://b2b:8000
+      B2C_URL: http://b2c:8000
+    volumes:
+      - ./moderation/migrations:/app/migrations
+    depends_on:
+      - moderation_db
+    ports:
+      - "8002:8000"
+
 volumes:
   b2b_pg_data:
   b2c_pg_data:
+  moderation_pg_data:

@@ -1,0 +1,19 @@
+FROM python:3.13-slim
+
+WORKDIR /app
+
+COPY moderation/requirements.txt moderation/requirements-test.txt .
+
+RUN pip install --no-cache-dir --index-url https://pypi.org/simple --extra-index-url https://mirror.yandex.ru/pypi/simple/ -r requirements.txt -r requirements-test.txt
+
+COPY shared /tmp/shared
+
+RUN pip install --no-cache-dir /tmp/shared
+
+COPY moderation/src /app/src
+
+COPY moderation/migrations /app/migrations
+
+COPY moderation/alembic.ini /app/alembic.ini
+
+CMD ["pytest", "tests/", "-v", "--cov=src", "--cov-report=term"]

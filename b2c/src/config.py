@@ -2,8 +2,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file="../.env", extra="ignore")
-
     B2C_DB_USER: str = "postgres"
     B2C_DB_PASSWORD: str = "postgres"
     B2C_DB_NAME: str = "b2c"
