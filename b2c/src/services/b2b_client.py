@@ -22,7 +22,7 @@ async def _request(method: str, path: str, json=None) -> dict:
                 status_code=404,
                 detail={"code": "NOT_FOUND", "message": "Resource not found"}
             )
-        raise
+        raise B2BUnavailable()
 
 async def get_sku(sku_id: UUID) -> dict:
     """Получить информацию о SKU из B2B (публичный эндпоинт /api/v1/public/skus/{sku_id})."""
@@ -68,7 +68,7 @@ async def batch_get_products(product_ids: List[UUID]) -> Dict[UUID, dict]:
     return result
 
 
-async def reserve_skus(idempotency_key: UUID, items: list[dict]) -> dict:
+async def reserve_skus(idempotency_key: UUID, order_id: UUID, items: list[dict]) -> dict:
     """
     Вызывает POST /api/v1/inventory/reserve в B2B.
     Возвращает результат (успех или ошибку).
@@ -76,6 +76,7 @@ async def reserve_skus(idempotency_key: UUID, items: list[dict]) -> dict:
     """
     payload = {
         "idempotency_key": str(idempotency_key),
+        "order_id": str(order_id),
         "items": items,
     }
     try:
