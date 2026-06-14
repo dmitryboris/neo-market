@@ -90,17 +90,7 @@ async def create_order(
     payment_method = await session.get(PaymentMethod, payment_method_id)
     if not payment_method or payment_method.buyer_id != buyer_id:
         raise PaymentMethodNotFound()
-
-    reserve_items = [
-        {"sku_id": str(item.sku_id), "quantity": item.quantity}
-        for item in enriched_cart.items
-    ]
-
-    reserve_result = await reserve_skus(idempotency_key, reserve_items)
-
-    if not reserve_result.get("reserved", False):
-        raise ReserveFailed(reserve_result.get("failed_items", []))
-
+    
     order = Order(
         user_id=buyer_id,
         status=OrderStatus.PAID,
@@ -111,7 +101,22 @@ async def create_order(
     )
 
     session.add(order)
-    await session.flush()  # order.id exists now
+    await session.flush()
+
+    reserve_items = [
+        {"sku_id": str(item.sku_id), "quantity": item.quantity}
+        for item in enriched_cart.items
+    ]
+
+    reserve_result = await reserve_skus(
+        idempotency_key=idempotency_key,
+        order_id=order.id,
+        items=reserve_items,
+    )
+
+    if not reserve_result.get("reserved", False):
+        raise ReserveFailed(reserve_result.get("failed_items", []))
+
 
     if not existing_record:
         session.add(
