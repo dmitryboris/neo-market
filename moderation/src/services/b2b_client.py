@@ -1,21 +1,25 @@
 import httpx
+import uuid
+from datetime import datetime, timezone
 from uuid import UUID
 from src.config import settings
 from src.services.exceptions import B2BServiceUnavailable
 
 
 async def check_product_has_skus(product_id: UUID) -> bool:
-    """Проверяет через B2B, есть ли у товара хотя бы один SKU. Возвращает True, если SKU есть."""
-    url = f"{settings.B2B_URL}/api/v1/products/{product_id}"
+    url = f"{settings.B2B_URL}/api/v1/public/products/batch"
     headers = {"X-Service-Key": settings.MOD_TO_B2B_KEY}
+    body = {"product_ids": [str(product_id)]}
     async with httpx.AsyncClient(timeout=5.0) as client:
         try:
-            resp = await client.get(url, headers=headers)
+            resp = await client.post(url, json=body, headers=headers)
             if resp.status_code == 404:
                 return False
             resp.raise_for_status()
-            product_data = resp.json()
-            return bool(product_data.get("skus"))
+            products = resp.json()
+            if not products:
+                return False
+            return bool(products[0].get("skus"))
         except httpx.HTTPStatusError as e:
             raise B2BServiceUnavailable(f"B2B error: {e.response.status_code}")
         except (httpx.ConnectError, httpx.TimeoutException):
@@ -23,10 +27,14 @@ async def check_product_has_skus(product_id: UUID) -> bool:
 
 
 async def send_moderated_event(product_id: UUID) -> None:
-    """Отправляет событие MODERATED в B2B."""
-    url = f"{settings.B2B_URL}/api/v1/events/moderation"
+    url = f"{settings.B2B_URL}/api/v1/moderation/events"
     headers = {"X-Service-Key": settings.MOD_TO_B2B_KEY}
-    payload = {"product_id": str(product_id), "status": "MODERATED"}
+    payload = {
+        "idempotency_key": str(uuid.uuid4()),
+        "product_id": str(product_id),
+        "event_type": "MODERATED",
+        "occurred_at": datetime.now(timezone.utc).isoformat(),
+    }
     async with httpx.AsyncClient(timeout=5.0) as client:
         try:
             resp = await client.post(url, json=payload, headers=headers)
@@ -38,21 +46,25 @@ async def send_moderated_event(product_id: UUID) -> None:
 
 
 async def send_blocked_event(
-        product_id: UUID,
-        hard_block: bool,
-        reasons: list[dict],
-        field_reports: list[dict],
+    product_id: UUID,
+    hard_block: bool,
+    reasons: list[dict],
+    field_reports: list[dict],
 ) -> None:
-    url = f"{settings.B2B_URL}/api/v1/events/moderation"
+
+    url = f"{settings.B2B_URL}/api/v1/moderation/events"
     headers = {"X-Service-Key": settings.MOD_TO_B2B_KEY}
     payload = {
+        "idempotency_key": str(uuid.uuid4()),
         "product_id": str(product_id),
-        "status": "BLOCKED",
+        "event_type": "BLOCKED",
+        "occurred_at": datetime.now(timezone.utc).isoformat(),
+        "blocking_reason_id": reasons[0]["id"] if reasons else None,
         "hard_block": hard_block,
-        "blocking_reason": reasons[0] if reasons else None,
-        "blocking_reasons": reasons,
         "field_reports": field_reports,
     }
+    # Убираем None-значения, чтобы не засорять payload
+    payload = {k: v for k, v in payload.items() if v is not None}
     async with httpx.AsyncClient(timeout=5.0) as client:
         try:
             resp = await client.post(url, json=payload, headers=headers)
