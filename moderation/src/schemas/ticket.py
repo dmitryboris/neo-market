@@ -26,9 +26,9 @@ class TicketResponse(BaseModel):
 
 
 class FieldReportSchema(BaseModel):
-    field_name: str
+    field_path: str
     sku_id: UUID | None = None
-    comment: str = Field(..., max_length=500)
+    message: str = Field(..., max_length=500)
 
 
 class BlockDecisionRequest(BaseModel):

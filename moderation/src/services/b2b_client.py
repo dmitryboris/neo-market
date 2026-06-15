@@ -7,18 +7,15 @@ from src.services.exceptions import B2BServiceUnavailable
 
 
 async def check_product_has_skus(product_id: UUID) -> bool:
-    url = f"{settings.B2B_URL}/api/v1/public/products/batch"
+    url = f"{settings.B2B_URL}/api/v1/public/products/{product_id}"
     headers = {"X-Service-Key": settings.MOD_TO_B2B_KEY}
-    body = {"product_ids": [str(product_id)]}
     async with httpx.AsyncClient(timeout=5.0) as client:
         try:
-            resp = await client.post(url, json=body, headers=headers)
+            resp = await client.post(url, headers=headers)
             if resp.status_code == 404:
                 return False
             resp.raise_for_status()
             products = resp.json()
-            if not products:
-                return False
             return bool(products[0].get("skus"))
         except httpx.HTTPStatusError as e:
             raise B2BServiceUnavailable(f"B2B error: {e.response.status_code}")
