@@ -24,7 +24,7 @@ async def get_product(product_id: UUID) -> dict:
 
 
 async def check_product_has_skus(product_id: UUID) -> bool:
-    url = f"{settings.B2B_URL}/api/v1/public/products/{product_id}"
+    url = f"{settings.B2B_URL}/api/v1/products/{product_id}"
     headers = {"X-Service-Key": settings.MOD_TO_B2B_KEY}
     async with httpx.AsyncClient(timeout=5.0) as client:
         try:
