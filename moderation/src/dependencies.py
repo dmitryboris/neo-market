@@ -91,3 +91,14 @@ async def require_admin_role(
             detail={"code": "FORBIDDEN", "message": "Insufficient privileges"},
         )
     return current
+
+
+async def verify_b2b_service_key(
+    x_service_key: str = Header(None, alias="X-Service-Key"),
+) -> str:
+    if not x_service_key or x_service_key != settings.B2B_TO_MOD_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"code": "UNAUTHORIZED", "message": "Invalid service key"},
+        )
+    return x_service_key

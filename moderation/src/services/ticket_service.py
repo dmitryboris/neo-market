@@ -29,7 +29,7 @@ async def approve_ticket(
         raise TicketNotFound()
 
     if ticket.status == TicketStatus.HARD_BLOCKED:
-        raise TicketHardBlocked()
+        raise TicketHardBlockedModify()
     if ticket.status != TicketStatus.IN_REVIEW:
         raise TicketNotInReview()
 
@@ -66,7 +66,7 @@ async def block_ticket(
         raise TicketNotFound()
 
     if ticket.status == TicketStatus.HARD_BLOCKED:
-        raise TicketHardBlocked()
+        raise TicketHardBlockedModify()
     if ticket.status != TicketStatus.IN_REVIEW:
         raise TicketNotInReview()
     if ticket.claimed_by != moderator.id:
@@ -78,10 +78,10 @@ async def block_ticket(
     }
     if request.field_reports:
         for report in request.field_reports:
-            if report.field_name not in VALID_FIELD_NAMES:
+            if report.field_path not in VALID_FIELD_NAMES:
                 raise DomainException(
                     code="INVALID_REQUEST",
-                    message=f"Invalid field_name: {report.field_name}. "
+                    message=f"Invalid field_path: {report.field_path}. "
                             f"Allowed: {', '.join(sorted(VALID_FIELD_NAMES))}",
                     status_code=400,
                 )

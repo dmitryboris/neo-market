@@ -74,7 +74,7 @@ async def test_soft_block_transitions_to_blocked_with_field_reports(
         "blocking_reason_ids": [str(reason.id)],
         "comment": "Bad description",
         "field_reports": [
-            {"field_name": "title", "comment": "Misleading title"}
+            {"field_path": "title", "message": "Misleading title"}
         ]
     }
 
@@ -210,7 +210,7 @@ async def test_soft_block_invalid_field_name_returns_400(
     payload = {
         "blocking_reason_ids": [str(reason.id)],
         "field_reports": [
-            {"field_name": "invalid_field", "comment": "Error"}
+            {"field_path": "invalid_field", "message": "Error"}
         ]
     }
 
@@ -223,4 +223,4 @@ async def test_soft_block_invalid_field_name_returns_400(
     assert response.status_code == 400
     data = response.json()
     assert data["code"] == "INVALID_REQUEST"
-    assert "field_name" in data["message"].lower()
+    assert "field_path" in data["message"].lower()

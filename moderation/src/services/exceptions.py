@@ -20,6 +20,9 @@ class TicketNotFound(DomainException):
     def __init__(self, message="Ticket not found"):
         super().__init__(code="NOT_FOUND", message=message, status_code=404)
 
+class ProductNotFound(DomainException):
+    def __init__(self, message="Product not found"):
+        super().__init__(code="NOT_FOUND", message=message, status_code=404)
 
 class TicketNotInReview(DomainException):
     def __init__(self, message="Ticket is not in review status"):
@@ -54,3 +57,13 @@ class BlockingReasonNotFound(DomainException):
 class TicketHardBlockedModify(DomainException):
     def __init__(self, message="Cannot modify hard-blocked ticket"):
         super().__init__(code="FORBIDDEN", message=message, status_code=403)
+
+
+class DuplicateEvent(DomainException):
+    def __init__(self, message="Duplicate event"):
+        super().__init__(code="DUPLICATE", message=message, status_code=409)
+
+
+class InvalidEventType(DomainException):
+    def __init__(self, message="Invalid event type"):
+        super().__init__(code="INVALID_REQUEST", message=message, status_code=400)
