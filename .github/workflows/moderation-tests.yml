@@ -11,6 +11,7 @@ jobs:
       fail-fast: false
       matrix:
         test-file:
+          - US-MOD-01.py
           - US-MOD-03.py
           - US-MOD-04.py
           - US-MOD-05.py

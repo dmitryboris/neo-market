@@ -29,7 +29,7 @@ async def approve_ticket(
         raise TicketNotFound()
 
     if ticket.status == TicketStatus.HARD_BLOCKED:
-        raise TicketHardBlocked()
+        raise TicketHardBlockedModify()
     if ticket.status != TicketStatus.IN_REVIEW:
         raise TicketNotInReview()
 
@@ -66,7 +66,7 @@ async def block_ticket(
         raise TicketNotFound()
 
     if ticket.status == TicketStatus.HARD_BLOCKED:
-        raise TicketHardBlocked()
+        raise TicketHardBlockedModify()
     if ticket.status != TicketStatus.IN_REVIEW:
         raise TicketNotInReview()
     if ticket.claimed_by != moderator.id:
