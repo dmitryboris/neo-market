@@ -107,7 +107,6 @@ async def create_order(
         {"sku_id": str(item.sku_id), "quantity": item.quantity}
         for item in enriched_cart.items
     ]
-
     reserve_result = await reserve_skus(
         idempotency_key=idempotency_key,
         order_id=order.id,

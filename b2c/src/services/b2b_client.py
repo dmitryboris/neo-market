@@ -22,6 +22,8 @@ async def _request(method: str, path: str, json=None) -> dict:
                 status_code=404,
                 detail={"code": "NOT_FOUND", "message": "Resource not found"}
             )
+        if e.response.status_code == 409:
+            raise
         raise B2BUnavailable()
 
 async def get_sku(sku_id: UUID) -> dict:
@@ -84,11 +86,7 @@ async def reserve_skus(idempotency_key: UUID, order_id: UUID, items: list[dict])
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 409:
             return e.response.json()
-        
-        if e.response.status_code == 503:
-            raise B2BUnavailable()
-        
-        raise
+        raise 
 
 
 async def unreserve_skus(order_id: UUID, items: list[dict]) -> dict:

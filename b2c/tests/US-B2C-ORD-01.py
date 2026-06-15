@@ -1,7 +1,7 @@
 import pytest
 from uuid import uuid4, UUID
 from unittest.mock import AsyncMock, patch
-from httpx import AsyncClient, HTTPStatusError
+from httpx import AsyncClient, HTTPStatusError, Response, Request
 from sqlalchemy import select
 from src.models import Order, OrderItem, Address, PaymentMethod, Cart, CartItem, Buyer, IdempotencyRecord
 from src.models.order import OrderStatus
@@ -181,7 +181,7 @@ async def test_idempotency_returns_existing_order(
 
 @pytest.mark.asyncio
 async def test_partial_reserve_failure_returns_409(
-    auth_client, db_session, test_address, test_payment_method, cart_with_two_skus
+    auth_client, db_session, test_address, test_payment_method, cart_with_two_skus, httpx_mock
 ):
     client, buyer = auth_client
     cart, skus = cart_with_two_skus
@@ -192,48 +192,90 @@ async def test_partial_reserve_failure_returns_409(
         "address_id": str(test_address.id),
         "payment_method_id": str(test_payment_method.id),
     }
+
     idempotency_key = str(uuid4())
     headers = {"Idempotency-Key": idempotency_key}
 
-    with patch("src.services.cart_service.batch_get_products", new_callable=AsyncMock) as mock_batch, \
-         patch("src.services.order_service.reserve_skus", new_callable=AsyncMock) as mock_reserve:
-
-        mock_batch.return_value = {
-            prod1: {
-                "status": "MODERATED",
+    httpx_mock.add_response(
+        method="POST",
+        url="https://b2b.example.com/api/v1/public/products/batch",
+        json=[
+            {
+                "id": str(prod1),
                 "title": "Product 1",
-                "skus": {sku1: {"price": 1000, "active_quantity": 10, "name": "SKU1"}}
-            },
-            prod2: {
                 "status": "MODERATED",
+                "skus": [
+                    {
+                        "id": str(sku1),
+                        "name": "SKU1",
+                        "price": 1000,
+                        "active_quantity": 10,
+                    }
+                ],
+            },
+            {
+                "id": str(prod2),
                 "title": "Product 2",
-                "skus": {sku2: {"price": 2000, "active_quantity": 0, "name": "SKU2"}}
-            }
-        }
-        mock_reserve.side_effect = HTTPStatusError(
-            message="Conflict",
-            request=None,
-            response=AsyncMock(status_code=409, json=lambda: {
-                "reserved": False,
-                "failed_items": [{"sku_id": str(sku2), "requested": 1, "available": 0, "reason": "OUT_OF_STOCK"}]
-            })
-        )
+                "status": "MODERATED",
+                "skus": [
+                    {
+                        "id": str(sku2),
+                        "name": "SKU2",
+                        "price": 2000,
+                        "active_quantity": 1,
+                    }
+                ],
+            },
+        ],
+    )
 
-        response = await client.post("/api/v1/orders", json=payload, headers=headers)
-        assert response.status_code == 409
-        error = response.json()
-        assert error["code"] == "RESERVE_FAILED"
-        assert "failed_items" in error["details"]
-        assert error["details"]["failed_items"][0]["sku_id"] == str(sku2)
-        assert error["details"]["failed_items"][0]["reason"] == "OUT_OF_STOCK"
+    httpx_mock.add_response(
+        method="POST",
+        url="https://b2b.example.com/api/v1/inventory/reserve",
+        status_code=409,
+        json={
+            "reserved": False,
+            "failed_items": [
+                {
+                    "sku_id": str(sku2),
+                    "requested": 1,
+                    "available": 0,
+                    "reason": "OUT_OF_STOCK",
+                }
+            ],
+        },
+    )
 
-        record = await db_session.get(IdempotencyRecord, UUID(idempotency_key))
-        assert record is None
+    response = await client.post(
+        "/api/v1/orders",
+        json=payload,
+        headers=headers,
+    )
+
+    assert response.status_code == 409
+
+    error = response.json()
+
+    assert error["code"] == "RESERVE_FAILED"
+    assert "failed_items" in error["details"]
+    assert error["details"]["failed_items"][0]["sku_id"] == str(sku2)
+    assert error["details"]["failed_items"][0]["reason"] == "OUT_OF_STOCK"
+
+    record = await db_session.get(
+        IdempotencyRecord,
+        UUID(idempotency_key),
+    )
+    assert record is None
 
 
 @pytest.mark.asyncio
 async def test_b2b_unavailable_returns_503(
-    auth_client, db_session, test_address, test_payment_method, cart_with_sku
+    auth_client,
+    db_session,
+    test_address,
+    test_payment_method,
+    cart_with_sku,
+    httpx_mock,
 ):
     client, buyer = auth_client
     cart, sku_id, product_id = cart_with_sku
@@ -242,29 +284,49 @@ async def test_b2b_unavailable_returns_503(
         "address_id": str(test_address.id),
         "payment_method_id": str(test_payment_method.id),
     }
+
     idempotency_key = str(uuid4())
     headers = {"Idempotency-Key": idempotency_key}
 
-    with patch("src.services.cart_service.batch_get_products", new_callable=AsyncMock) as mock_batch, \
-         patch("src.services.b2b_client._request", new_callable=AsyncMock) as mock_reserve:
-
-        mock_batch.return_value = {
-            product_id: {
-                "status": "MODERATED",
+    httpx_mock.add_response(
+        method="POST",
+        url="https://b2b.example.com/api/v1/public/products/batch",
+        json=[
+            {
+                "id": str(product_id),
                 "title": "Product",
-                "skus": {sku_id: {"price": 1000, "active_quantity": 10, "name": "SKU"}}
+                "status": "MODERATED",
+                "skus": [
+                    {
+                        "id": str(sku_id),
+                        "name": "SKU",
+                        "price": 1000,
+                        "active_quantity": 10,
+                    }
+                ],
             }
-        }
-        mock_reserve.side_effect = HTTPStatusError(
-            message="Service Unavailable",
-            request=None,
-            response=AsyncMock(status_code=503, json=lambda: {"code": "B2B_UNAVAILABLE", "message": "Service unavailable"})
-        )
+        ],
+    )
 
-        response = await client.post("/api/v1/orders", json=payload, headers=headers)
-        assert response.status_code == 503
-        error = response.json()
-        assert error["code"] == "B2B_UNAVAILABLE"
+    httpx_mock.add_response(
+        method="POST",
+        url="https://b2b.example.com/api/v1/inventory/reserve",
+        status_code=503,
+        json={
+            "code": "B2B_UNAVAILABLE",
+            "message": "B2B service is unavailable",
+        },
+    )
 
-        record = await db_session.get(IdempotencyRecord, UUID(idempotency_key))
-        assert record is None
+    response = await client.post(
+        "/api/v1/orders",
+        json=payload,
+        headers=headers,
+    )
+
+    assert response.status_code == 503
+    body = response.json()
+    assert body["code"] == "B2B_UNAVAILABLE"
+
+    record = await db_session.get(IdempotencyRecord, UUID(idempotency_key))
+    assert record is None
