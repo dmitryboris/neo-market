@@ -28,12 +28,12 @@ async def check_product_has_skus(product_id: UUID) -> bool:
     headers = {"X-Service-Key": settings.MOD_TO_B2B_KEY}
     async with httpx.AsyncClient(timeout=5.0) as client:
         try:
-            resp = await client.post(url, headers=headers)
+            resp = await client.get(url, headers=headers)
             if resp.status_code == 404:
                 return False
             resp.raise_for_status()
-            products = resp.json()
-            return bool(products[0].get("skus"))
+            product = resp.json()
+            return bool(product.get("skus"))
         except httpx.HTTPStatusError as e:
             raise B2BServiceUnavailable(f"B2B error: {e.response.status_code}")
         except (httpx.ConnectError, httpx.TimeoutException):
