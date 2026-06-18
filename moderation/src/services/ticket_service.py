@@ -104,11 +104,16 @@ async def block_ticket(
 
     main_reason_id = reasons[0].id if reasons else None
 
+    b2b_reports = [
+        {"field_name": r.field_path, "comment": r.message}
+        for r in request.field_reports
+    ] if request.field_reports else []
+
     await send_blocked_event(
         product_id=ticket.product_id,
         hard_block=hard_block,
         reasons=reason_data,
-        field_reports=[r.model_dump() for r in request.field_reports] if request.field_reports else []
+        field_reports=b2b_reports
     )
 
     ticket.status = TicketStatus.HARD_BLOCKED if hard_block else TicketStatus.BLOCKED
