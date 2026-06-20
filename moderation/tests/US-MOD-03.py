@@ -69,7 +69,7 @@ async def test_approve_transitions_to_moderated_and_emits_event(
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "APPROVED"
-    assert data["claimed_by"] == str(moderator.id)
+    assert data["assigned_moderator_id"] == str(moderator.id)
     assert data["decision_at"] is not None
 
     mock_send_event.assert_called_once_with(ticket.product_id)

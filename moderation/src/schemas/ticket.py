@@ -17,7 +17,11 @@ class TicketResponse(BaseModel):
     kind: str
     status: str
     queue_priority: int
-    claimed_by: UUID | None
+    assigned_moderator_id: UUID | None = Field(
+        alias="claimed_by",
+        validation_alias="claimed_by",
+        serialization_alias="assigned_moderator_id",
+    )
     claimed_at: datetime | None
     claim_expires_at: datetime | None
     decision_at: datetime | None
@@ -28,7 +32,7 @@ class TicketResponse(BaseModel):
 class FieldReportSchema(BaseModel):
     field_path: str
     sku_id: UUID | None = None
-    message: str = Field(..., max_length=500)
+    message: str = Field(..., max_length=1000)
 
 
 class BlockDecisionRequest(BaseModel):
