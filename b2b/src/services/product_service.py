@@ -54,7 +54,24 @@ async def get_my_products(
         include_deleted: bool = False,
 
 ) -> ProductPaginatedResponse:
-    query = select(Product).where(Product.seller_id == seller_id)
+    min_price_sub = (
+        select(SKU.product_id, func.min(SKU.price).label("min_price"))
+        .group_by(SKU.product_id)
+        .subquery()
+    )
+    cover_sub = (
+        select(ProductImage.url)
+        .where(ProductImage.product_id == Product.id)
+        .order_by(ProductImage.ordering.asc())
+        .limit(1)
+        .correlate(Product)  # важно для корреляции
+        .scalar_subquery()
+    )
+    query = (
+        select(Product, min_price_sub.c.min_price, cover_sub.label("cover_image"))
+        .outerjoin(min_price_sub, min_price_sub.c.product_id == Product.id)
+        .where(Product.seller_id == seller_id)
+    )
 
     if status:
         query = query.where(Product.status == status)
@@ -63,16 +80,22 @@ async def get_my_products(
     if search:
         query = query.where(Product.title.ilike(f"%{search}%"))
 
-    total = await session.scalar(select(func.count()).select_from(query.subquery()))
+    count_query = select(func.count()).select_from(query.subquery())
+    total = await session.scalar(count_query)
 
     query = query.order_by(Product.created_at.desc()).limit(limit).offset(offset)
     result = await session.execute(query.options(selectinload(Product.images)))
-    items = result.scalars().all()
-    
-    short_items = [ProductShortResponse.model_validate(p) for p in items]
+    rows = result.all()
+
+    items = []
+    for product, min_price_val, cover_img in rows:
+        product._min_price = int(min_price_val) if min_price_val is not None else None
+        product._cover_image = cover_img
+        items.append(ProductShortResponse.model_validate(product, from_attributes=True))
+
     return ProductPaginatedResponse(
         total_count=total,
-        items=short_items,
+        items=items,
         limit=limit,
         offset=offset,
     )
