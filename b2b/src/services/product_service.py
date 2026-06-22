@@ -64,7 +64,7 @@ async def get_my_products(
         .where(ProductImage.product_id == Product.id)
         .order_by(ProductImage.ordering.asc())
         .limit(1)
-        .correlate(Product)  # важно для корреляции
+        .correlate(Product)
         .scalar_subquery()
     )
     query = (
