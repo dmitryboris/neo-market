@@ -6,12 +6,12 @@ from sqlalchemy.orm import selectinload
 from src.models import SKU, Product, ProductStatus, SKUImage, SKUCharacteristic
 from src.schemas.sku import SKUCreate, SKUUpdate
 from src.services.exceptions import (
-    ProductNotFound, ProductHardBlocked, SKUNameEmpty, SKUNameInvalid, NotOwner,
+    ProductNotFound, ProductHardBlocked, SKUNameEmpty, SKUNameInvalid, NotOwner, SKUHasActiveReserves,
     SKUImageNotFound, SKUPriceInvalid, SKUCostPriceInvalid, SKUNotFound, UUIDInvalid
 )
 from src.config import settings
 import httpx
-from src.services.communication_service import _send_moderation_event
+from src.services.communication_service import _send_moderation_event, _send_b2c_event
 
 
 async def get_product_with_access(session: AsyncSession, product_id: UUID, seller_id: UUID) -> Product:
@@ -179,6 +179,36 @@ async def update_sku(
     return await get_sku_by_id(session, str(sku.id), sku.product.seller_id)
 
 
-async def delete_sku(session: AsyncSession, sku: SKU) -> None:
+async def delete_sku(session: AsyncSession, sku_id: UUID, seller_id: UUID) -> None:
+    stmt = select(SKU).where(SKU.id == sku_id).options(selectinload(SKU.product))
+    result = await session.execute(stmt)
+    sku = result.scalar_one_or_none()
+
+    if not sku:
+        raise SKUNotFound()
+    if sku.product.seller_id != seller_id:
+        raise NotOwner("SKU does not belong to the authenticated seller")
+    if sku.product.status == ProductStatus.HARD_BLOCKED:
+        raise ProductHardBlocked("Cannot delete SKU of hard-blocked product")
+    if sku.reserved_quantity > 0:
+        raise SKUHasActiveReserves()
+
+    product = sku.product
+    count_stmt = select(func.count(SKU.id)).where(SKU.product_id == product.id)
+    total_skus = await session.scalar(count_stmt)
+    is_last_sku = (total_skus == 1)
+
+    was_active = sku.active_quantity > 0
+    product_status = product.status
+
     await session.delete(sku)
+    await session.flush()
+
+    if is_last_sku and product_status == ProductStatus.ON_MODERATION:
+        product.status = ProductStatus.CREATED
+        await _send_moderation_event(product, "DELETED")
+
+    if was_active and product_status == ProductStatus.MODERATED:
+        await _send_b2c_event(product, [sku_id], "SKU_OUT_OF_STOCK")
+
     await session.commit()
