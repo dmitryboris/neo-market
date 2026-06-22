@@ -87,11 +87,9 @@ async def test_delete_sku_hard_blocked_product_returns_403(client, db_session):
 async def test_sku_out_of_stock_event_on_moderated_product(client, db_session):
     prod = await _create_product(db_session, ProductStatus.MODERATED)
     sku = await _create_sku(db_session, prod.id, active=5)
-    with patch("src.services.sku_service._send_b2c_event", AsyncMock()) as mock_b2c:
+    with patch("src.services.sku_service.send_sku_out_of_stock_event", AsyncMock()) as mock_b2c:
         response = await client.delete(f"/api/v1/skus/{sku.id}")
         assert response.status_code == 204
         mock_b2c.assert_called_once()
         args, _ = mock_b2c.call_args
-        assert args[2] == "SKU_OUT_OF_STOCK"
-        assert args[1][0] == sku.id
-        assert args[0] == prod
+        assert args[0] == sku
