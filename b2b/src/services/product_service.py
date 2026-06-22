@@ -50,17 +50,25 @@ async def get_my_products(
         limit: int = 20,
         offset: int = 0,
         status: ProductStatus | None = None,
+        search: str | None = None,
         include_deleted: bool = False,
+
 ) -> ProductPaginatedResponse:
     query = select(Product).where(Product.seller_id == seller_id)
+
     if status:
         query = query.where(Product.status == status)
     if not include_deleted:
         query = query.where(Product.deleted == False)
+    if search:
+        query = query.where(Product.title.ilike(f"%{search}%"))
+
     total = await session.scalar(select(func.count()).select_from(query.subquery()))
+
     query = query.order_by(Product.created_at.desc()).limit(limit).offset(offset)
     result = await session.execute(query.options(selectinload(Product.images)))
     items = result.scalars().all()
+    
     short_items = [ProductShortResponse.model_validate(p) for p in items]
     return ProductPaginatedResponse(
         total_count=total,
