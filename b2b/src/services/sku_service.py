@@ -11,7 +11,7 @@ from src.services.exceptions import (
 )
 from src.config import settings
 import httpx
-from src.services.communication_service import _send_moderation_event, _send_b2c_event
+from src.services.communication_service import _send_moderation_event, send_sku_out_of_stock_event
 
 
 async def get_product_with_access(session: AsyncSession, product_id: UUID, seller_id: UUID) -> Product:
@@ -209,6 +209,6 @@ async def delete_sku(session: AsyncSession, sku_id: UUID, seller_id: UUID) -> No
         await _send_moderation_event(product, "DELETED")
 
     if was_active and product_status == ProductStatus.MODERATED:
-        await _send_b2c_event(product, [sku_id], "SKU_OUT_OF_STOCK")
+        await send_sku_out_of_stock_event(sku)
 
     await session.commit()
