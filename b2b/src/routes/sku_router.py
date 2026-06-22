@@ -49,11 +49,7 @@ async def delete_sku(
         session: AsyncSession = Depends(get_session),
         current_seller: Seller = Depends(get_current_user),
 ):
-    sku = await sku_service.get_sku_by_id(session, sku_id, current_seller.id)
-    if not sku:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail={"code": "NOT_FOUND", "message": "SKU not found"})
-    await sku_service.delete_sku(session, sku)
+    await sku_service.delete_sku(session, sku_id, current_seller.id)
 
 
 @sku_router.post("/{sku_id}/images", response_model=SKUImageResponse, status_code=status.HTTP_201_CREATED)
