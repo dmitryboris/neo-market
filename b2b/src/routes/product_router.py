@@ -38,11 +38,20 @@ async def get_my_products(
         limit: int = 20,
         offset: int = 0,
         status: ProductStatus | None = None,
+        search: str | None = None,
         include_deleted: bool = False,
         session: AsyncSession = Depends(get_session),
         current_seller: Seller = Depends(get_current_user)
 ):
-    return await product_service.get_my_products(session, current_seller.id, limit, offset, status, include_deleted)
+    return await product_service.get_my_products(
+        limit=limit,
+        offset=offset,
+        status=status,
+        search=search,
+        include_deleted=include_deleted,
+        session=session,
+        seller_id=current_seller.id,
+    )
 
 
 @product_router.get("/{product_id}", response_model=Union[ProductDetailResponse, ProductPublicResponse])
